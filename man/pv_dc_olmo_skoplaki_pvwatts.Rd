@@ -16,11 +16,13 @@ pv_dc_olmo_skoplaki_pvwatts(
   albedo = 0.2,
   P_dc0 = 230,
   gamma = -0.0043,
-  skoplaki_variant = c("linear", "ratio"),
-  a = 28,
-  b = -1,
-  u0 = 25,
-  u1 = 6
+  skoplaki_variant = c("model1", "model2"),
+  T_NOCT = 45,
+  T_a_NOCT = 20,
+  I_NOCT = 800,
+  v_NOCT = 1,
+  eta_STC = 0.141,
+  tau_alpha = 0.9
 )
 }
 \arguments{
@@ -42,19 +44,23 @@ pv_dc_olmo_skoplaki_pvwatts(
 
 \item{albedo}{Ground albedo (default 0.2)}
 
-\item{P_dc0}{DC nameplate power (W, default 230 for Trina module)}
+\item{P_dc0}{DC nameplate power (W, default 230 for Trina TSM-230 PC05 module)}
 
-\item{gamma}{Temperature coefficient (1/K, default -0.0043)}
+\item{gamma}{Temperature coefficient of max power (1/K, default -0.0043 for TSM-230)}
 
-\item{skoplaki_variant}{"linear" or "ratio" (default "linear")}
+\item{skoplaki_variant}{Either "model1" or "model2" (default "model1"). Model 1 uses h_w = 8.91 + 2.00\emph{v_f, Model 2 uses h_w = 5.7 + 3.8}v_w}
 
-\item{a}{Skoplaki linear a (default 28)}
+\item{T_NOCT}{Nominal Operating Cell Temperature in °C (default 45 for TSM-230)}
 
-\item{b}{Skoplaki linear b (default -1)}
+\item{T_a_NOCT}{Ambient temperature at NOCT conditions in °C (default 20)}
 
-\item{u0}{Skoplaki ratio u0 (default 25)}
+\item{I_NOCT}{Irradiance at NOCT conditions in W/m² (default 800)}
 
-\item{u1}{Skoplaki ratio u1 (default 6)}
+\item{v_NOCT}{Wind speed at NOCT conditions in m/s (default 1)}
+
+\item{eta_STC}{Module efficiency at STC (default 0.141 for TSM-230)}
+
+\item{tau_alpha}{Product of transmittance and absorption coefficient (default 0.9)}
 }
 \value{
 Data frame with G_poa, T_cell, P_dc, etc.

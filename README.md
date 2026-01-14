@@ -13,9 +13,10 @@ The parameters and specifications for the Mulilo De Aar PV plant used in this pa
 ## Features
 
 - **Olmo Transposition Model**: Converts global horizontal irradiance (GHI) to plane-of-array (POA) irradiance
-- **Skoplaki Cell Temperature Models**: Two variants for calculating PV cell temperature
-  - Linear model: `T_cell = T_air + (G_poa/1000) * (a + b * wind)`
-  - Ratio model: `T_cell = T_air + G_poa / (u0 + u1 * wind)`
+- **Skoplaki Cell Temperature Models**: Two variants for calculating PV cell temperature based on NOCT (Nominal Operating Cell Temperature)
+  - Model 1: Uses wind convection coefficient `h_w = 8.91 + 2.00*v_f`
+  - Model 2: Uses wind convection coefficient `h_w = 5.7 + 3.8*v_w` where `v_w = 0.68*v_f - 0.5`
+  - Both models use Equation 41 from Ayvazoğluyüksel & Başaran Filik (2018)
 - **PVWatts DC Power Model**: Calculates DC power output with temperature correction
 - **AC Inverter Clipping**: Simple inverter efficiency and power clipping model
 - **Solar Position Calculations**: Internal implementation of solar position algorithms (from the archived insol package)
@@ -58,7 +59,7 @@ dc_out <- pv_dc_olmo_skoplaki_pvwatts(
   tilt = tilt,
   azimuth = azimuth,
   P_dc0 = 230,  # Nameplate DC power (W)
-  skoplaki_variant = "linear"
+  skoplaki_variant = "model1"
 )
 
 head(dc_out)
@@ -108,7 +109,13 @@ Main DC power pipeline combining Olmo transposition, Skoplaki cell temperature, 
 - `azimuth`: Panel azimuth (degrees, 0 = north)
 - `P_dc0`: DC nameplate power (W, default 230)
 - `gamma`: Temperature coefficient (1/K, default -0.0043)
-- `skoplaki_variant`: "linear" or "ratio" (default "linear")
+- `skoplaki_variant`: "model1" or "model2" (default "model1")
+- `T_NOCT`: Nominal Operating Cell Temperature (°C, default 45)
+- `T_a_NOCT`: Ambient temperature at NOCT conditions (°C, default 20)
+- `I_NOCT`: Irradiance at NOCT conditions (W/m², default 800)
+- `v_NOCT`: Wind speed at NOCT conditions (m/s, default 1)
+- `eta_STC`: Module efficiency at STC (default 0.141)
+- `tau_alpha`: Product of transmittance and absorption coefficient (default 0.9)
 
 **Returns:** Data frame with POA irradiance, cell temperature, DC power, and solar position
 
@@ -137,15 +144,20 @@ vignette("de_aar", package = "pvwattsOlmoSkoplaki")
 The package includes sensible defaults based on:
 
 - **PV Module**: Trina TSM-PC05 (230W polycrystalline)
-  - Temperature coefficient: -0.0043 /K
+  - Nameplate power: 230 W
+  - Temperature coefficient: -0.0043 /K (-0.43%/K)
+  - Efficiency at STC: 14.1%
+  - NOCT: 45°C
 
-- **Skoplaki Linear Model** (default):
-  - a = 28
-  - b = -1
+- **NOCT Conditions** (standard):
+  - Ambient temperature: 20°C
+  - Irradiance: 800 W/m²
+  - Wind speed: 1 m/s
 
-- **Skoplaki Ratio Model**:
-  - u0 = 25
-  - u1 = 6
+- **Skoplaki Cell Temperature Models**:
+  - Model 1 (default): h_w = 8.91 + 2.00*v_f
+  - Model 2: h_w = 5.7 + 3.8*v_w
+  - τα (tau_alpha): 0.9
 
 - **Inverter**:
   - Efficiency: 97%

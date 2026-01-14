@@ -20,19 +20,23 @@
 #'
 #' @param albedo Ground albedo (default 0.2)
 #'
-#' @param P_dc0 DC nameplate power (W, default 230 for Trina module)
+#' @param P_dc0 DC nameplate power (W, default 230 for Trina TSM-230 PC05 module)
 #'
-#' @param gamma Temperature coefficient (1/K, default -0.0043)
+#' @param gamma Temperature coefficient of max power (1/K, default -0.0043 for TSM-230)
 #'
-#' @param skoplaki_variant "linear" or "ratio" (default "linear")
+#' @param skoplaki_variant Either "model1" or "model2" (default "model1"). Model 1 uses h_w = 8.91 + 2.00*v_f, Model 2 uses h_w = 5.7 + 3.8*v_w
 #'
-#' @param a Skoplaki linear a (default 28)
+#' @param T_NOCT Nominal Operating Cell Temperature in °C (default 45 for TSM-230)
 #'
-#' @param b Skoplaki linear b (default -1)
+#' @param T_a_NOCT Ambient temperature at NOCT conditions in °C (default 20)
 #'
-#' @param u0 Skoplaki ratio u0 (default 25)
+#' @param I_NOCT Irradiance at NOCT conditions in W/m² (default 800)
 #'
-#' @param u1 Skoplaki ratio u1 (default 6)
+#' @param v_NOCT Wind speed at NOCT conditions in m/s (default 1)
+#'
+#' @param eta_STC Module efficiency at STC (default 0.141 for TSM-230)
+#'
+#' @param tau_alpha Product of transmittance and absorption coefficient (default 0.9)
 #'
 #' @return Data frame with G_poa, T_cell, P_dc, etc.
 #'
@@ -49,11 +53,13 @@ pv_dc_olmo_skoplaki_pvwatts <- function(
   albedo = 0.2,
   P_dc0 = 230,
   gamma = -0.0043,
-  skoplaki_variant = c("linear", "ratio"),
-  a = 28,
-  b = -1,
-  u0 = 25,
-  u1 = 6
+  skoplaki_variant = c("model1", "model2"),
+  T_NOCT = 45,
+  T_a_NOCT = 20,
+  I_NOCT = 800,
+  v_NOCT = 1,
+  eta_STC = 0.141,
+  tau_alpha = 0.9
 ) {
   skoplaki_variant <- match.arg(skoplaki_variant)
   stopifnot(
@@ -87,11 +93,32 @@ pv_dc_olmo_skoplaki_pvwatts <- function(
     0
   )
   G_poa <- pmax(0, GHI * R_T)
-  T_cell <- switch(
-    skoplaki_variant,
-    linear = T_air + (G_poa / 1000) * (a + b * wind),
-    ratio = T_air + G_poa / (u0 + u1 * wind)
-  )
+
+  # Calculate wind convection coefficient at NOCT
+  if (skoplaki_variant == "model1") {
+    h_w_NOCT <- 8.91 + 2.00 * v_NOCT
+    h_w <- 8.91 + 2.00 * wind
+  } else {  # model2
+    v_w_NOCT <- 0.68 * v_NOCT - 0.5
+    h_w_NOCT <- 5.7 + 3.8 * v_w_NOCT
+    v_w <- 0.68 * wind - 0.5
+    h_w <- 5.7 + 3.8 * v_w
+  }
+
+  # Skoplaki cell temperature model (Equation 41 from paper)
+  # Reference: Skoplaki et al. (2008), DOI: 10.1016/j.solmat.2008.05.016
+  T_STC <- 25  # Standard test condition temperature
+
+  # Numerator
+  numerator <- T_air + (G_poa / I_NOCT) * (T_NOCT - T_a_NOCT) *
+    (h_w_NOCT / h_w) * (1 - eta_STC * (1 - gamma * T_STC)) / tau_alpha
+
+  # Denominator
+  denominator <- 1 - (gamma * eta_STC / tau_alpha) *
+    (G_poa / I_NOCT) * (T_NOCT - T_a_NOCT) * (h_w_NOCT / h_w)
+
+  T_cell <- numerator / denominator
+
   P_dc <- P_dc0 * (G_poa / 1000) * (1 + gamma * (T_cell - 25))
   P_dc[P_dc < 0] <- 0
   data.frame(
