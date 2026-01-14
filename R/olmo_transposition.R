@@ -113,6 +113,9 @@ olmo_transposition <- function(
   cosz <- cos(theta_z)
 
   # Equation 33: Extraterrestrial radiation on horizontal surface
+  # Paper formula: I_0 = I_sol * (1 + 0.033*cos(360d/365)) * (cos(phi)*cos(delta)*cos(W) + sin(phi)*sin(delta))
+  # The trigonometric term is the standard definition for cos(theta_z). We use insol's
+  # Meeus-based zenith angle calculation for higher accuracy.
   I_0 <- I_sol * eccentricity * pmax(0, cosz)
 
   # Equation 36: Clearness index
