@@ -13,12 +13,20 @@ The parameters and specifications for the Mulilo De Aar PV plant used in this pa
 ## Features
 
 ### Transposition Models
-- **Hay-Davies Model** (default): Anisotropic sky model using Erbs decomposition (GHI→DNI/DHI) then Hay-Davies transposition
+- **Hay-Davies Model** (default): Anisotropic sky model using decomposition (GHI→DNI/DHI) then Hay-Davies transposition
+- **Reindl Model**: Anisotropic sky model with circumsolar and horizon brightening components
+- **Perez Model**: Anisotropic sky model using 8-bin classification system for sky conditions
 - **Olmo et al. Model**: Converts GHI to POA using clearness index method without decomposition (Olmo et al., 1999)
 
 **Note:** The Olmo model was calibrated for Granada, Spain and has been shown to produce
 significant errors (RMSE of 21-52%) at other locations. The Hay-Davies model is recommended
 for most applications. See `?olmo_transposition` for details.
+
+### Decomposition Models
+- **Erbs Model** (default): Piecewise polynomial diffuse fraction model (Erbs et al., 1982)
+- **Boland-Ridley Model**: Logistic function diffuse fraction model (Boland et al., 2001)
+
+**Note:** Decomposition models are only used when transposition_model is not "olmo".
 
 ### Cell Temperature Models
 - **Skoplaki Model**: Two variants based on NOCT with different wind convection coefficients
@@ -30,7 +38,7 @@ for most applications. See `?olmo_transposition` for details.
 - **Incidence Angle Modifier (IAM)**: Optional optical loss correction using power-law model
 - **PVWatts DC Power Model**: Calculates DC power with temperature correction
 - **AC Inverter Clipping**: Simple inverter efficiency and power clipping model
-- **Ensemble Analysis**: Run all 4 transposition × cell temperature model combinations
+- **Ensemble Analysis**: Run all 8 transposition × cell temperature model combinations
 - **Solar Position Calculations**: Internal implementation from the insol package
 
 ## Installation
@@ -107,7 +115,7 @@ result_alt <- pv_power_pipeline(
 
 ### Ensemble Analysis
 
-Run all 4 model combinations for uncertainty quantification:
+Run all 8 model combinations (4 transposition × 2 cell temperature) for uncertainty quantification:
 
 ```r
 # Get all model combinations with AC power
@@ -141,10 +149,14 @@ ensemble_stats <- ensemble %>%
 
 | Transposition | Cell Temperature | Identifier |
 |---------------|------------------|------------|
-| Olmo | Skoplaki | `olmo_skoplaki` |
-| Olmo | Faiman | `olmo_faiman` |
 | Hay-Davies | Skoplaki | `haydavies_skoplaki` |
 | Hay-Davies | Faiman | `haydavies_faiman` |
+| Reindl | Skoplaki | `reindl_skoplaki` |
+| Reindl | Faiman | `reindl_faiman` |
+| Perez | Skoplaki | `perez_skoplaki` |
+| Perez | Faiman | `perez_faiman` |
+| Olmo | Skoplaki | `olmo_skoplaki` |
+| Olmo | Faiman | `olmo_faiman` |
 
 ## Function Reference
 
@@ -157,7 +169,8 @@ Complete DC + AC pipeline with independent model selection:
 ```r
 pv_power_pipeline(
   time, lat, lon, GHI, T_air, wind, tilt, azimuth,
-  transposition_model = c("haydavies", "olmo"),
+  transposition_model = c("haydavies", "reindl", "perez", "olmo"),
+  decomposition_model = c("erbs", "boland"),
   cell_temp_model = c("skoplaki", "faiman"),
   iam_exp = 0.05,  # Set to FALSE to disable IAM
   ...
@@ -182,7 +195,7 @@ pv_dc_pipeline(
 
 #### `pv_power_ensemble()` / `pv_dc_ensemble()`
 
-Run all 4 model combinations for ensemble analysis:
+Run all 8 model combinations for ensemble analysis:
 
 ```r
 pv_power_ensemble(time, lat, lon, GHI, T_air, wind, tilt, azimuth, ...)
@@ -210,6 +223,20 @@ erbs_decomposition(time, lat, lon, GHI)
 ```
 
 **Returns:** Data frame with DNI, DHI, kt, zenith
+
+#### `boland_decomposition()`
+
+Decomposes GHI into DNI and DHI using the Boland-Ridley logistic model:
+
+```r
+boland_decomposition(
+  time, lat, lon, GHI,
+  a_coeff = 7.997,   # 1-hour coefficients (default)
+  b_coeff = 0.586    # 1-hour coefficients (default)
+)
+```
+
+**Returns:** Data frame with DNI, DHI, kt, zenith, df
 
 #### `haydavies_transposition()`
 
@@ -328,6 +355,11 @@ The package includes sensible defaults based on:
   - Ambient temperature: 20°C
   - Irradiance: 800 W/m²
   - Wind speed: 1 m/s
+
+- **Boland-Ridley Decomposition**:
+  - a_coeff: 7.997 (1-hour data coefficients)
+  - b_coeff: 0.586 (1-hour data coefficients)
+  - Alternative 15-minute coefficients: a = 8.645, b = 0.613
 
 - **Skoplaki Cell Temperature Models**:
   - Model 1 (default): h_w = 8.91 + 2.00*v_f

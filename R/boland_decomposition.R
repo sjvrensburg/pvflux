@@ -17,8 +17,8 @@
 #' @param lat Latitude in degrees
 #' @param lon Longitude in degrees
 #' @param GHI Global horizontal irradiance (W/m^2)
-#' @param a_coeff Logistic curve fit coefficient. Default 8.645.
-#' @param b_coeff Logistic curve fit coefficient. Default 0.613.
+#' @param a_coeff Logistic curve fit coefficient. Default 7.997.
+#' @param b_coeff Logistic curve fit coefficient. Default 0.586.
 #' @param min_cos_zenith Minimum value of cos(zenith) to allow when calculating
 #'   global clearness index kt. Equivalent to zenith = 86.273 degrees.
 #'   Default: 0.065
@@ -53,8 +53,8 @@
 #' Parameters `a_coeff` and `b_coeff` are reported in Boland et al. (2001)
 #' for different time intervals:
 #' \itemize{
-#'   \item 15-minute: `a = 8.645` and `b = 0.613` (default)
-#'   \item 1-hour: `a = 7.997` and `b = 0.586`
+#'   \item 15-minute: `a = 8.645` and `b = 0.613`
+#'   \item 1-hour: `a = 7.997` and `b = 0.586` (default)
 #' }
 #'
 #' @seealso
@@ -81,8 +81,8 @@ boland_decomposition <- function(
   lat,
   lon,
   GHI,
-  a_coeff = 8.645,
-  b_coeff = 0.613,
+  a_coeff = 7.997,
+  b_coeff = 0.586,
   min_cos_zenith = 0.065,
   max_zenith = 87,
   solar_constant = 1366.1

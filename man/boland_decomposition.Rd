@@ -9,8 +9,8 @@ boland_decomposition(
   lat,
   lon,
   GHI,
-  a_coeff = 8.645,
-  b_coeff = 0.613,
+  a_coeff = 7.997,
+  b_coeff = 0.586,
   min_cos_zenith = 0.065,
   max_zenith = 87,
   solar_constant = 1366.1
@@ -25,9 +25,9 @@ boland_decomposition(
 
 \item{GHI}{Global horizontal irradiance (W/m^2)}
 
-\item{a_coeff}{Logistic curve fit coefficient. Default 8.645.}
+\item{a_coeff}{Logistic curve fit coefficient. Default 7.997.}
 
-\item{b_coeff}{Logistic curve fit coefficient. Default 0.613.}
+\item{b_coeff}{Logistic curve fit coefficient. Default 0.586.}
 
 \item{min_cos_zenith}{Minimum value of cos(zenith) to allow when calculating
 global clearness index kt. Equivalent to zenith = 86.273 degrees.
@@ -70,8 +70,8 @@ of a logistic function to fit the entire range of clearness index, Kt.
 Parameters \code{a_coeff} and \code{b_coeff} are reported in Boland et al. (2001)
 for different time intervals:
 \itemize{
-\item 15-minute: \code{a = 8.645} and \code{b = 0.613} (default)
-\item 1-hour: \code{a = 7.997} and \code{b = 0.586}
+\item 15-minute: \code{a = 8.645} and \code{b = 0.613}
+\item 1-hour: \code{a = 7.997} and \code{b = 0.586} (default)
 }
 }
 \examples{
