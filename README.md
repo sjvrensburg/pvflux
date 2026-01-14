@@ -8,7 +8,7 @@ An R package implementing a solar PV power forecasting pipeline with Olmo transp
 
 ## Public Data Notice
 
-The parameters and specifications for the Mulilo De Aar PV plant used in this package are publicly available information, documented at the [HAWI Knowledge Database](https://hawiknowledge.org/solar_power_stations_2.html#DeAarMulilo). This information is not proprietary and has been openly published for research and educational purposes.
+The parameters and specifications for the Mulilo De Aar PV plant used in this package are publicly available information, documented at the [HAWI Knowledge Database](https://hawiknowledge.org/solar_power_stations_2.html#DeAarMulilo). This information is not proprietary and has been openly published.
 
 ## Features
 
@@ -182,10 +182,11 @@ ORCID: [0000-0002-0749-2277](https://orcid.org/0000-0002-0749-2277)
 
 ## References
 
-- Olmo transposition model
-- Skoplaki cell temperature models
-- PVWatts methodology
-- Corripio, J. G. (2003). Solar position algorithms from insol package
+- **Ayvazoğluyüksel, Ö., & Başaran Filik, Ü. (2018).** Estimation methods of global solar radiation, cell temperature and solar power forecasting: A review and case study in Eskişehir. *Renewable and Sustainable Energy Reviews*, 91, 639-653. [https://doi.org/10.1016/j.rser.2018.03.084](https://doi.org/10.1016/j.rser.2018.03.084)
+
+- **Corripio, J. G. (2003).** Vectorial algebra algorithms for calculating terrain parameters from DEMs and the position of the sun for solar radiation modelling in mountainous terrain. *International Journal of Geographical Information Science*, 17(1), 1-23.
+
+- **Skoplaki, E., Boudouvis, A. G., & Palyvos, J. A. (2008).** A simple correlation for the operating temperature of photovoltaic modules of arbitrary mounting. *Solar Energy Materials and Solar Cells*, 92(11), 1393-1402.
 
 ## Contributing
 
