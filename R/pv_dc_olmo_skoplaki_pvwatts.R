@@ -4,7 +4,7 @@
 #' \enumerate{
 #'   \item \strong{Olmo et al. transposition}: GHI to POA irradiance
 #'   \item \strong{Skoplaki cell temperature}: POA + weather to cell temperature
-#'   \item \strong{PVWatts DC model}: POA + cell temp to DC power
+#'   \item \strong{PVWatts DC model}: POA + cell temp to DC power (with optional IAM)
 #' }
 #'
 #' This function provides a complete DC power calculation pipeline. For more
@@ -21,6 +21,8 @@
 #' @param tilt Panel tilt angle (degrees)
 #' @param azimuth Panel azimuth (degrees, 0 = north)
 #' @param albedo Ground albedo (default 0.2)
+#' @param iam_exp IAM exponent for power-law model. Default 0.05. Set to NA or
+#'   FALSE to disable IAM correction.
 #' @param P_dc0 DC nameplate power (W, default 230 for Trina TSM-230 PC05 module)
 #' @param gamma Temperature coefficient of max power (1/K, default -0.0043)
 #' @param skoplaki_variant Either "model1" or "model2" (default "model1")
@@ -32,7 +34,7 @@
 #' @param tau_alpha Product of transmittance and absorption coefficient (default 0.9)
 #'
 #' @return Data frame with columns: time, GHI, G_poa, T_air, wind, T_cell, P_dc,
-#' zenith, sun_azimuth, incidence, skoplaki
+#' zenith, sun_azimuth, incidence, skoplaki, iam (if IAM enabled)
 #'
 #' @seealso
 #' \code{\link{olmo_transposition}} for transposition model details
@@ -55,6 +57,10 @@
 #' Solar Energy Materials and Solar Cells, 92(11), 1393-1402.
 #' \doi{10.1016/j.solmat.2008.05.016}
 #'
+#' Martin, N., & Ruiz, J. M. (2001). Calculation of the PV modules angular
+#' losses under field conditions by means of an analytical model. Solar Energy
+#' Materials and Solar Cells, 70(1), 25-38. \doi{10.1016/S0927-0248(00)00404-5}
+#'
 #' @export
 #'
 pv_dc_olmo_skoplaki_pvwatts <- function(
@@ -66,6 +72,7 @@ pv_dc_olmo_skoplaki_pvwatts <- function(
   tilt,
   azimuth,
   albedo = 0.2,
+  iam_exp = 0.05,
   P_dc0 = 230,
   gamma = -0.0043,
   skoplaki_variant = c("model1", "model2"),
@@ -109,16 +116,31 @@ pv_dc_olmo_skoplaki_pvwatts <- function(
     tau_alpha = tau_alpha
   )
 
-  # Step 3: PVWatts DC power (G_poa, T_cell -> P_dc)
+  # Step 3: PVWatts DC power (G_poa, T_cell, incidence -> P_dc)
+  # Only apply IAM if iam_exp is not NA/FALSE
+  if (isFALSE(iam_exp) || is.na(iam_exp)) {
+    incidence_param <- NULL
+    iam_exp_param <- NA
+    iam_values <- NA
+  } else {
+    incidence_param <- olmo_out$incidence
+    iam_exp_param <- iam_exp
+    # Calculate IAM for output
+    cos_theta <- pmax(0, cos(olmo_out$incidence * pi / 180))
+    iam_values <- cos_theta ^ iam_exp
+  }
+
   P_dc <- pvwatts_dc(
     G_poa = olmo_out$G_poa,
     T_cell = T_cell,
+    incidence = incidence_param,
+    iam_exp = iam_exp_param,
     P_dc0 = P_dc0,
     gamma = gamma
   )
 
   # Combine results
-  data.frame(
+  result <- data.frame(
     time = time,
     GHI = GHI,
     G_poa = olmo_out$G_poa,
@@ -131,4 +153,11 @@ pv_dc_olmo_skoplaki_pvwatts <- function(
     incidence = olmo_out$incidence,
     skoplaki = skoplaki_variant
   )
+
+  # Add IAM column if IAM was enabled
+  if (!isFALSE(iam_exp) && !is.na(iam_exp)) {
+    result$iam <- iam_values
+  }
+
+  result
 }
