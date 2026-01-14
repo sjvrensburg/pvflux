@@ -1,22 +1,25 @@
 #' @title Complete PV Power Pipeline: DC and AC
 #'
 #' @description Convenience function that calculates both DC and AC power by
-#' chaining together transposition, cell temperature, and DC models, plus AC conversion.
+#' chaining together transposition, decomposition, cell temperature, and DC models,
+#' plus AC conversion.
 #'
 #' This function allows independent selection of:
 #' \itemize{
-#'   \item \strong{Transposition models}: "olmo" (Olmo et al.) or "haydavies" (Erbs + Hay-Davies)
+#'   \item \strong{Transposition models}: "haydavies", "reindl", "perez", or "olmo"
+#'   \item \strong{Decomposition models}: "erbs" or "boland"
 #'   \item \strong{Cell temperature models}: "skoplaki" or "faiman"
 #' }
 #'
-#' Default behavior uses "haydavies" + "skoplaki" as these models have been validated
-#' across diverse locations and conditions.
+#' Default behavior uses "haydavies" + "erbs" + "skoplaki" as these models have been
+#' validated across diverse locations and conditions.
 #'
 #' This is the highest-level convenience function in the package. For more control
 #' over individual steps, use the underlying functions:
 #' \itemize{
 #'   \item \code{\link{olmo_transposition}} - Olmo transposition model
 #'   \item \code{\link{erbs_decomposition}} - Erbs decomposition model
+#'   \item \code{\link{boland_decomposition}} - Boland decomposition model
 #'   \item \code{\link{haydavies_transposition}} - Hay-Davies transposition model
 #'   \item \code{\link{skoplaki_cell_temperature}} - Skoplaki cell temperature model
 #'   \item \code{\link{faiman_cell_temperature}} - Faiman cell temperature model
@@ -35,7 +38,8 @@
 #' @param tilt Panel tilt angle (degrees)
 #' @param azimuth Panel azimuth (degrees, 0 = north)
 #' @param albedo Ground albedo (default 0.2)
-#' @param transposition_model Transposition model: "olmo" or "haydavies" (default "haydavies")
+#' @param transposition_model Transposition model: "haydavies", "reindl", "perez", or "olmo" (default "haydavies")
+#' @param decomposition_model Decomposition model: "erbs" or "boland" (default "erbs")
 #' @param cell_temp_model Cell temperature model: "skoplaki" or "faiman" (default "skoplaki")
 #'
 #' @note The default transposition model is "haydavies" rather than "olmo" because
@@ -72,12 +76,14 @@
 #'
 #' @return Data frame with columns varying by model selection. Always includes:
 #' time, GHI, G_poa, T_air, wind, T_cell, P_dc, P_ac, clipped, P_ac_rated,
-#' zenith, incidence, transposition, cell_temp, iam (if IAM enabled).
-#' May also include: sun_azimuth (olmo), azimuth/DNI/DHI/ai/rb (haydavies), skoplaki (skoplaki).
+#' zenith, incidence, transposition, decomposition, cell_temp, iam (if IAM enabled).
+#' May also include: sun_azimuth (olmo), azimuth/DNI/DHI/ai/rb (haydavies/reindl),
+#' azimuth/DNI/DHI/epsilon/delta/ebin/F1/F2 (perez), skoplaki (skoplaki), df (boland).
 #'
 #' @seealso
 #' \code{\link{olmo_transposition}} for transposition model details
 #' \code{\link{erbs_decomposition}} for Erbs decomposition model details
+#' \code{\link{boland_decomposition}} for Boland decomposition model details
 #' \code{\link{haydavies_transposition}} for Hay-Davies transposition details
 #' \code{\link{skoplaki_cell_temperature}} for cell temperature model details
 #' \code{\link{faiman_cell_temperature}} for Faiman cell temperature details
@@ -156,6 +162,7 @@ pv_power_pipeline <- function(
   azimuth,
   albedo = 0.2,
   transposition_model = c("haydavies", "reindl", "perez", "olmo"),
+  decomposition_model = c("erbs", "boland"),
   cell_temp_model = c("skoplaki", "faiman"),
   iam_exp = 0.05,
   P_dc0 = 230,
@@ -186,6 +193,7 @@ pv_power_pipeline <- function(
     azimuth = azimuth,
     albedo = albedo,
     transposition_model = transposition_model,
+    decomposition_model = decomposition_model,
     cell_temp_model = cell_temp_model,
     iam_exp = iam_exp,
     P_dc0 = P_dc0,

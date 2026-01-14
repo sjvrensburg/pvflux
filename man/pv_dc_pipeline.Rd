@@ -15,6 +15,7 @@ pv_dc_pipeline(
   azimuth,
   albedo = 0.2,
   transposition_model = c("haydavies", "reindl", "perez", "olmo"),
+  decomposition_model = c("erbs", "boland"),
   cell_temp_model = c("skoplaki", "faiman"),
   iam_exp = 0.05,
   P_dc0 = 230,
@@ -51,6 +52,8 @@ pv_dc_pipeline(
 \item{albedo}{Ground albedo (default 0.2)}
 
 \item{transposition_model}{Transposition model: "haydavies", "reindl", "perez", or "olmo" (default "haydavies")}
+
+\item{decomposition_model}{Decomposition model: "erbs" or "boland" (default "erbs")}
 
 \item{cell_temp_model}{Cell temperature model: "skoplaki" or "faiman" (default "skoplaki")}
 
@@ -94,15 +97,17 @@ Default 6.84 W/(m²·°C·m/s). Only used for "faiman" cell temperature model.}
 \value{
 Data frame with columns varying by model selection. Always includes:
 time, GHI, G_poa, T_air, wind, T_cell, P_dc, zenith, incidence, iam (if IAM enabled).
-May also include: sun_azimuth (olmo), azimuth/DNI/DHI/ai/rb (haydavies), skoplaki (skoplaki).
+May also include: sun_azimuth (olmo), azimuth/DNI/DHI/ai/rb (haydavies/reindl),
+azimuth/DNI/DHI/epsilon/delta/ebin/F1/F2 (perez), skoplaki (skoplaki), df (boland).
 }
 \description{
 Computes DC power by combining independently selected
-transposition and cell temperature models with the PVWatts DC model.
+transposition, decomposition, and cell temperature models with the PVWatts DC model.
 
 This function allows any combination of:
 \itemize{
-\item \strong{Transposition models}: "haydavies" (Erbs + Hay-Davies), "reindl" (Erbs + Reindl), "perez" (Erbs + Perez), or "olmo" (Olmo et al.)
+\item \strong{Transposition models}: "haydavies" (Hay-Davies), "reindl" (Reindl), "perez" (Perez), or "olmo" (Olmo et al.)
+\item \strong{Decomposition models}: "erbs" (Erbs et al.) or "boland" (Boland-Ridley)
 \item \strong{Cell temperature models}: "skoplaki" or "faiman"
 }
 }
@@ -115,6 +120,7 @@ See \code{\link{olmo_transposition}} for details.
 \seealso{
 \code{\link{olmo_transposition}} for Olmo transposition model details
 \code{\link{erbs_decomposition}} for Erbs decomposition model details
+\code{\link{boland_decomposition}} for Boland decomposition model details
 \code{\link{haydavies_transposition}} for Hay-Davies transposition details
 \code{\link{reindl_transposition}} for Reindl transposition details
 \code{\link{perez_transposition}} for Perez transposition details

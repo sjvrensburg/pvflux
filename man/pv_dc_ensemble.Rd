@@ -84,6 +84,7 @@ Data frame with columns:
 \item time, GHI, T_air, wind - Input data
 \item model - Model combination identifier (e.g., "olmo_skoplaki")
 \item transposition - Transposition model used
+\item decomposition - Decomposition model used (default: "erbs")
 \item cell_temp - Cell temperature model used
 \item G_poa - Plane-of-array irradiance (W/m^2)
 \item T_cell - Cell temperature (deg C)

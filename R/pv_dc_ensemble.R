@@ -48,6 +48,7 @@
 #'   \item time, GHI, T_air, wind - Input data
 #'   \item model - Model combination identifier (e.g., "olmo_skoplaki")
 #'   \item transposition - Transposition model used
+#'   \item decomposition - Decomposition model used (default: "erbs")
 #'   \item cell_temp - Cell temperature model used
 #'   \item G_poa - Plane-of-array irradiance (W/m^2)
 #'   \item T_cell - Cell temperature (deg C)
@@ -153,7 +154,7 @@ pv_dc_ensemble <- function(
 
     # Return only common columns for ensemble comparison
     cols_to_keep <- c("time", "GHI", "T_air", "wind", "model", "transposition",
-                      "cell_temp", "G_poa", "T_cell", "P_dc")
+                      "decomposition", "cell_temp", "G_poa", "T_cell", "P_dc")
     if (!isFALSE(iam_exp) && !is.na(iam_exp)) {
       cols_to_keep <- c(cols_to_keep, "iam")
     }

@@ -1,11 +1,12 @@
 #' @title Modular PV DC Power Pipeline
 #'
 #' @description Computes DC power by combining independently selected
-#' transposition and cell temperature models with the PVWatts DC model.
+#' transposition, decomposition, and cell temperature models with the PVWatts DC model.
 #'
 #' This function allows any combination of:
 #' \itemize{
-#'   \item \strong{Transposition models}: "haydavies" (Erbs + Hay-Davies), "reindl" (Erbs + Reindl), "perez" (Erbs + Perez), or "olmo" (Olmo et al.)
+#'   \item \strong{Transposition models}: "haydavies" (Hay-Davies), "reindl" (Reindl), "perez" (Perez), or "olmo" (Olmo et al.)
+#'   \item \strong{Decomposition models}: "erbs" (Erbs et al.) or "boland" (Boland-Ridley)
 #'   \item \strong{Cell temperature models}: "skoplaki" or "faiman"
 #' }
 #'
@@ -19,6 +20,7 @@
 #' @param azimuth Panel azimuth (degrees, 0 = north)
 #' @param albedo Ground albedo (default 0.2)
 #' @param transposition_model Transposition model: "haydavies", "reindl", "perez", or "olmo" (default "haydavies")
+#' @param decomposition_model Decomposition model: "erbs" or "boland" (default "erbs")
 #' @param cell_temp_model Cell temperature model: "skoplaki" or "faiman" (default "skoplaki")
 #'
 #' @note The default transposition model is "haydavies" rather than "olmo" because
@@ -52,11 +54,13 @@
 #'
 #' @return Data frame with columns varying by model selection. Always includes:
 #' time, GHI, G_poa, T_air, wind, T_cell, P_dc, zenith, incidence, iam (if IAM enabled).
-#' May also include: sun_azimuth (olmo), azimuth/DNI/DHI/ai/rb (haydavies), skoplaki (skoplaki).
+#' May also include: sun_azimuth (olmo), azimuth/DNI/DHI/ai/rb (haydavies/reindl),
+#' azimuth/DNI/DHI/epsilon/delta/ebin/F1/F2 (perez), skoplaki (skoplaki), df (boland).
 #'
 #' @seealso
 #' \code{\link{olmo_transposition}} for Olmo transposition model details
 #' \code{\link{erbs_decomposition}} for Erbs decomposition model details
+#' \code{\link{boland_decomposition}} for Boland decomposition model details
 #' \code{\link{haydavies_transposition}} for Hay-Davies transposition details
 #' \code{\link{reindl_transposition}} for Reindl transposition details
 #' \code{\link{perez_transposition}} for Perez transposition details
@@ -77,6 +81,7 @@ pv_dc_pipeline <- function(
   azimuth,
   albedo = 0.2,
   transposition_model = c("haydavies", "reindl", "perez", "olmo"),
+  decomposition_model = c("erbs", "boland"),
   cell_temp_model = c("skoplaki", "faiman"),
   iam_exp = 0.05,
   P_dc0 = 230,
@@ -93,6 +98,7 @@ pv_dc_pipeline <- function(
   u1 = 6.84
 ) {
   transposition_model <- match.arg(transposition_model)
+  decomposition_model <- match.arg(decomposition_model)
   cell_temp_model <- match.arg(cell_temp_model)
   skoplaki_variant <- match.arg(skoplaki_variant)
 
@@ -123,12 +129,21 @@ pv_dc_pipeline <- function(
     azimuth_out <- zenith
   } else if (transposition_model == "haydavies") {
     # First decompose GHI
-    erbs_out <- erbs_decomposition(
-      time = time,
-      lat = lat,
-      lon = lon,
-      GHI = GHI
-    )
+    if (decomposition_model == "boland") {
+      decomp_out <- boland_decomposition(
+        time = time,
+        lat = lat,
+        lon = lon,
+        GHI = GHI
+      )
+    } else {  # erbs
+      decomp_out <- erbs_decomposition(
+        time = time,
+        lat = lat,
+        lon = lon,
+        GHI = GHI
+      )
+    }
 
     # Then apply Hay-Davies transposition
     transp_out <- haydavies_transposition(
@@ -136,8 +151,8 @@ pv_dc_pipeline <- function(
       lat = lat,
       lon = lon,
       GHI = GHI,
-      DNI = erbs_out$DNI,
-      DHI = erbs_out$DHI,
+      DNI = decomp_out$DNI,
+      DHI = decomp_out$DHI,
       tilt = tilt,
       azimuth = azimuth,
       albedo = albedo,
@@ -150,12 +165,21 @@ pv_dc_pipeline <- function(
     sun_azimuth <- transp_out$azimuth
   } else if (transposition_model == "perez") {
     # First decompose GHI
-    erbs_out <- erbs_decomposition(
-      time = time,
-      lat = lat,
-      lon = lon,
-      GHI = GHI
-    )
+    if (decomposition_model == "boland") {
+      decomp_out <- boland_decomposition(
+        time = time,
+        lat = lat,
+        lon = lon,
+        GHI = GHI
+      )
+    } else {  # erbs
+      decomp_out <- erbs_decomposition(
+        time = time,
+        lat = lat,
+        lon = lon,
+        GHI = GHI
+      )
+    }
 
     # Then apply Perez transposition
     transp_out <- perez_transposition(
@@ -163,8 +187,8 @@ pv_dc_pipeline <- function(
       lat = lat,
       lon = lon,
       GHI = GHI,
-      DNI = erbs_out$DNI,
-      DHI = erbs_out$DHI,
+      DNI = decomp_out$DNI,
+      DHI = decomp_out$DHI,
       tilt = tilt,
       azimuth = azimuth,
       albedo = albedo
@@ -176,12 +200,21 @@ pv_dc_pipeline <- function(
     sun_azimuth <- transp_out$azimuth
   } else {  # reindl
     # First decompose GHI
-    erbs_out <- erbs_decomposition(
-      time = time,
-      lat = lat,
-      lon = lon,
-      GHI = GHI
-    )
+    if (decomposition_model == "boland") {
+      decomp_out <- boland_decomposition(
+        time = time,
+        lat = lat,
+        lon = lon,
+        GHI = GHI
+      )
+    } else {  # erbs
+      decomp_out <- erbs_decomposition(
+        time = time,
+        lat = lat,
+        lon = lon,
+        GHI = GHI
+      )
+    }
 
     # Then apply Reindl transposition
     transp_out <- reindl_transposition(
@@ -189,8 +222,8 @@ pv_dc_pipeline <- function(
       lat = lat,
       lon = lon,
       GHI = GHI,
-      DNI = erbs_out$DNI,
-      DHI = erbs_out$DHI,
+      DNI = decomp_out$DNI,
+      DHI = decomp_out$DHI,
       tilt = tilt,
       azimuth = azimuth,
       albedo = albedo,
@@ -270,32 +303,42 @@ pv_dc_pipeline <- function(
 
   # Add model identifiers
   result$transposition <- transposition_model
+  result$decomposition <- decomposition_model
   result$cell_temp <- cell_temp_model
 
   # Add model-specific columns
   if (transposition_model == "olmo") {
     result$sun_azimuth <- sun_azimuth
   } else if (transposition_model == "haydavies") {
-    result$DNI <- transp_out$DNI
-    result$DHI <- transp_out$DHI
+    result$DNI <- decomp_out$DNI
+    result$DHI <- decomp_out$DHI
     result$azimuth <- azimuth_out
     result$ai <- transp_out$ai
     result$rb <- transp_out$rb
+    if (decomposition_model == "boland") {
+      result$df <- decomp_out$df
+    }
   } else if (transposition_model == "perez") {
-    result$DNI <- transp_out$DNI
-    result$DHI <- transp_out$DHI
+    result$DNI <- decomp_out$DNI
+    result$DHI <- decomp_out$DHI
     result$azimuth <- azimuth_out
     result$epsilon <- transp_out$epsilon
     result$delta <- transp_out$delta
     result$ebin <- transp_out$ebin
     result$F1 <- transp_out$F1
     result$F2 <- transp_out$F2
+    if (decomposition_model == "boland") {
+      result$df <- decomp_out$df
+    }
   } else {  # reindl
-    result$DNI <- transp_out$DNI
-    result$DHI <- transp_out$DHI
+    result$DNI <- decomp_out$DNI
+    result$DHI <- decomp_out$DHI
     result$azimuth <- azimuth_out
     result$ai <- transp_out$ai
     result$rb <- transp_out$rb
+    if (decomposition_model == "boland") {
+      result$df <- decomp_out$df
+    }
   }
 
   if (cell_temp_model == "skoplaki") {
