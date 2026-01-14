@@ -6,6 +6,10 @@ An R package implementing a solar PV power forecasting pipeline with Olmo transp
 
 **Note:** This package is not intended for CRAN submission and is maintained as a GitHub-only package.
 
+## Public Data Notice
+
+The parameters and specifications for the Mulilo De Aar PV plant used in this package are publicly available information, documented at the [HAWI Knowledge Database](https://hawiknowledge.org/solar_power_stations_2.html#DeAarMulilo). This information is not proprietary and has been openly published for research and educational purposes.
+
 ## Features
 
 - **Olmo Transposition Model**: Converts global horizontal irradiance (GHI) to plane-of-array (POA) irradiance
@@ -22,7 +26,7 @@ You can install the development version of pvwattsOlmoSkoplaki from GitHub:
 
 ```r
 # install.packages("devtools")
-devtools::install_github("yourusername/pvwattsOlmoSkoplaki", build_vignettes = TRUE)
+devtools::install_github("sjvrensburg/pvwattsOlmoSkoplaki", build_vignettes = TRUE)
 ```
 
 ## Quick Start
