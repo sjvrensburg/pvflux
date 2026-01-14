@@ -14,7 +14,7 @@ pv_dc_pipeline(
   tilt,
   azimuth,
   albedo = 0.2,
-  transposition_model = c("olmo", "haydavies"),
+  transposition_model = c("haydavies", "olmo"),
   cell_temp_model = c("skoplaki", "faiman"),
   iam_exp = 0.05,
   P_dc0 = 230,
@@ -50,7 +50,7 @@ pv_dc_pipeline(
 
 \item{albedo}{Ground albedo (default 0.2)}
 
-\item{transposition_model}{Transposition model: "olmo" or "haydavies" (default "olmo")}
+\item{transposition_model}{Transposition model: "olmo" or "haydavies" (default "haydavies")}
 
 \item{cell_temp_model}{Cell temperature model: "skoplaki" or "faiman" (default "skoplaki")}
 
@@ -105,6 +105,12 @@ This function allows any combination of:
 \item \strong{Transposition models}: "olmo" (Olmo et al.) or "haydavies" (Erbs + Hay-Davies)
 \item \strong{Cell temperature models}: "skoplaki" or "faiman"
 }
+}
+\note{
+The default transposition model is "haydavies" rather than "olmo" because
+validation studies have shown that the Olmo model produces significant errors
+(RMSE of 21-52\%) outside of its calibration region (Granada, Spain).
+See \code{\link{olmo_transposition}} for details.
 }
 \seealso{
 \code{\link{olmo_transposition}} for Olmo transposition model details

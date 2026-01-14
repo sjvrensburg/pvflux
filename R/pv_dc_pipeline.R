@@ -18,8 +18,13 @@
 #' @param tilt Panel tilt angle (degrees)
 #' @param azimuth Panel azimuth (degrees, 0 = north)
 #' @param albedo Ground albedo (default 0.2)
-#' @param transposition_model Transposition model: "olmo" or "haydavies" (default "olmo")
+#' @param transposition_model Transposition model: "olmo" or "haydavies" (default "haydavies")
 #' @param cell_temp_model Cell temperature model: "skoplaki" or "faiman" (default "skoplaki")
+#'
+#' @note The default transposition model is "haydavies" rather than "olmo" because
+#' validation studies have shown that the Olmo model produces significant errors
+#' (RMSE of 21-52%) outside of its calibration region (Granada, Spain).
+#' See \code{\link{olmo_transposition}} for details.
 #' @param iam_exp IAM exponent for power-law model. Default 0.05. Set to NA or
 #'   FALSE to disable IAM correction.
 #' @param P_dc0 DC nameplate power (W, default 230 for Trina TSM-230 PC05 module)
@@ -69,7 +74,7 @@ pv_dc_pipeline <- function(
   tilt,
   azimuth,
   albedo = 0.2,
-  transposition_model = c("olmo", "haydavies"),
+  transposition_model = c("haydavies", "olmo"),
   cell_temp_model = c("skoplaki", "faiman"),
   iam_exp = 0.05,
   P_dc0 = 230,

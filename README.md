@@ -13,8 +13,12 @@ The parameters and specifications for the Mulilo De Aar PV plant used in this pa
 ## Features
 
 ### Transposition Models
+- **Hay-Davies Model** (default): Anisotropic sky model using Erbs decomposition (GHI→DNI/DHI) then Hay-Davies transposition
 - **Olmo et al. Model**: Converts GHI to POA using clearness index method without decomposition (Olmo et al., 1999)
-- **Hay-Davies Model**: Anisotropic sky model using Erbs decomposition (GHI→DNI/DHI) then Hay-Davies transposition
+
+**Note:** The Olmo model was calibrated for Granada, Spain and has been shown to produce
+significant errors (RMSE of 21-52%) at other locations. The Hay-Davies model is recommended
+for most applications. See `?olmo_transposition` for details.
 
 ### Cell Temperature Models
 - **Skoplaki Model**: Two variants based on NOCT with different wind convection coefficients
@@ -42,7 +46,7 @@ devtools::install_github("sjvrensburg/pvwattsOlmoSkoplaki", build_vignettes = TR
 
 ### Complete Pipeline (DC + AC) with Default Models
 
-The convenience function `pv_power_pipeline()` calculates both DC and AC power using Olmo transposition and Skoplaki cell temperature (default):
+The convenience function `pv_power_pipeline()` calculates both DC and AC power using Hay-Davies transposition and Skoplaki cell temperature (default):
 
 ```r
 library(pvwattsOlmoSkoplaki)
@@ -83,10 +87,10 @@ head(result)
 Select any combination of transposition and cell temperature models:
 
 ```r
-# Hay-Davies transposition + Faiman cell temperature
+# Olmo transposition + Skoplaki cell temperature
 result_alt <- pv_power_pipeline(
-  transposition_model = "haydavies",
-  cell_temp_model = "faiman",
+  transposition_model = "olmo",
+  cell_temp_model = "skoplaki",
   time = time,
   lat = lat,
   lon = lon,
@@ -153,12 +157,15 @@ Complete DC + AC pipeline with independent model selection:
 ```r
 pv_power_pipeline(
   time, lat, lon, GHI, T_air, wind, tilt, azimuth,
-  transposition_model = c("olmo", "haydavies"),
+  transposition_model = c("haydavies", "olmo"),
   cell_temp_model = c("skoplaki", "faiman"),
   iam_exp = 0.05,  # Set to FALSE to disable IAM
   ...
 )
 ```
+
+**Note:** Default is now "haydavies" instead of "olmo" due to validation issues
+with the Olmo model outside its calibration region (Granada, Spain).
 
 #### `pv_dc_pipeline()`
 
@@ -167,7 +174,7 @@ DC-only pipeline with independent model selection:
 ```r
 pv_dc_pipeline(
   time, lat, lon, GHI, T_air, wind, tilt, azimuth,
-  transposition_model = "olmo",
+  transposition_model = "haydavies",
   cell_temp_model = "skoplaki",
   ...
 )
@@ -277,13 +284,17 @@ pv_ac_simple_clipping(
 
 ### Legacy Convenience Functions
 
+**Warning:** The following functions use the Olmo transposition model, which has known
+accuracy issues outside of its calibration region (Granada, Spain). Consider using
+`pv_dc_pipeline()` or `pv_power_pipeline()` with `transposition_model = "haydavies"` instead.
+
 #### `pv_dc_olmo_skoplaki_pvwatts()`
 
 DC pipeline with Olmo + Skoplaki (maintained for backward compatibility).
 
 #### `pv_dc_haydavies_faiman_pvwatts()`
 
-DC pipeline with Hay-Davies + Faiman (alternative combination).
+DC pipeline with Hay-Davies + Faiman (recommended for most applications).
 
 ## Vignette
 
@@ -376,6 +387,10 @@ All AI-generated code and documentation was reviewed, validated against the orig
 - **Martin, N., & Ruiz, J. M. (2001).** Calculation of the PV modules angular losses under field conditions by means of an analytical model. *Solar Energy Materials and Solar Cells*, 70(1), 25-38. [https://doi.org/10.1016/S0927-0248(00)00404-5](https://doi.org/10.1016/S0927-0248(00)00404-5)
 
 - **Olmo, F. J., Vida, J., Foyo, I., Castro-Diez, Y., & Alados-Arboledas, L. (1999).** Prediction of global irradiance on inclined surfaces from horizontal global irradiance. *Energy*, 24(8), 689-704. [https://doi.org/10.1016/S0360-5442(99)00025-0](https://doi.org/10.1016/S0360-5442(99)00025-0)
+
+- **Evseev, E. G., & Kudish, A. I. (2009).** An assessment of a revised Olmo et al. model to predict solar global radiation on a tilted surface at Beer Sheva, Israel. *Renewable Energy*, 34(1), 112-119. [https://doi.org/10.1016/j.renene.2008.04.012](https://doi.org/10.1016/j.renene.2008.04.012)
+
+- **Ruiz, E., Soler, A., & Robledo, L. (2002).** Comparison of the Olmo model with global irradiance measurements on vertical surfaces at Madrid. *Energy*, 27(10), 975-986.
 
 - **Skoplaki, E., Boudouvis, A. G., & Palyvos, J. A. (2008).** A simple correlation for the operating temperature of photovoltaic modules of arbitrary mounting. *Solar Energy Materials and Solar Cells*, 92(11), 1393-1402. [https://doi.org/10.1016/j.solmat.2008.05.016](https://doi.org/10.1016/j.solmat.2008.05.016)
 

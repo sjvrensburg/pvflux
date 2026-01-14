@@ -17,6 +17,23 @@
 #' Note: This implementation uses angles in radians for the calculation, which is
 #' mathematically equivalent to the paper's formulation using angles in degrees.
 #'
+#' @section Warning:
+#' The Olmo model was developed and calibrated using data from Granada, Spain
+#' (37.18°N, 3.61°W). Validation studies at other locations have shown significant
+#' errors:
+#' \itemize{
+#'   \item Ruiz et al. (2002) found RMSE of 21.5% on south-facing surfaces and
+#'         52.2% on north-facing surfaces in Madrid
+#'   \item Evseev & Kudish (2009) found the model "generally overestimated" radiation
+#'         at Beer Sheva, Israel
+#'   \item RMSE increases with panel tilt (from ~8% at 12° to ~30% at higher tilts)
+#' }
+#'
+#' For most applications, especially outside southern Spain, the
+#' \code{\link{haydavies_transposition}} model with \code{\link{erbs_decomposition}}
+#' is recommended instead, as it provides more reliable estimates across diverse
+#' locations and conditions.
+#'
 #' @param time POSIXct vector of times (UTC recommended)
 #' @param lat Latitude in degrees
 #' @param lon Longitude in degrees
@@ -42,6 +59,13 @@
 #' Olmo, F. J., Vida, J., Foyo, I., Castro-Diez, Y., & Alados-Arboledas, L. (1999).
 #' Prediction of global irradiance on inclined surfaces from horizontal global irradiance.
 #' Energy, 24(8), 689-704. \doi{10.1016/S0360-5442(99)00025-0}
+#'
+#' Evseev, E. G., & Kudish, A. I. (2009). An assessment of a revised Olmo et al. model
+#' to predict solar global radiation on a tilted surface at Beer Sheva, Israel.
+#' Renewable Energy, 34(1), 112-119. \doi{10.1016/j.renene.2008.04.012}
+#'
+#' Ruiz, E., Soler, A., & Robledo, L. (2002). Comparison of the Olmo model with global
+#' irradiance measurements on vertical surfaces at Madrid. Energy, 27(10), 975-986.
 #'
 #' @examples
 #' \dontrun{
