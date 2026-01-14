@@ -5,10 +5,17 @@
 #'
 #' Unlike traditional transposition models that require decomposition of GHI into
 #' direct and diffuse components, this model uses the clearness index to directly
-#' estimate POA irradiance:
+#' estimate POA irradiance. Following Ayvazoğluyüksel & Başaran Filik (2018),
+#' the model is implemented as:
 #' \deqn{I_{\gamma} = I \cdot \psi_o \cdot F_c}
-#' where \eqn{\psi_o = \exp(-k_t(\theta^2 - \theta_z^2))} is the conversion function
-#' and \eqn{F_c = 1 + \rho \sin^2(\theta/2)} is the ground reflection multiplying factor.
+#' where:
+#' \itemize{
+#'   \item \eqn{\psi_o = \exp\left(-k_t\left(\left(\frac{\pi\theta}{180}\right)^2 - \left(\frac{\pi\theta_z}{180}\right)^2\right)\right)} is the conversion function
+#'   \item \eqn{F_c = 1 + \rho \sin^2(\theta/2)} is the ground reflection multiplying factor
+#' }
+#'
+#' Note: This implementation uses angles in radians for the calculation, which is
+#' mathematically equivalent to the paper's formulation using angles in degrees.
 #'
 #' @param time POSIXct vector of times (UTC recommended)
 #' @param lat Latitude in degrees
@@ -125,6 +132,8 @@ olmo_transposition <- function(
   F_c <- 1 + albedo * sin(theta / 2)^2
 
   # Equation 38: Conversion function psi_o
+  # Paper: psi_o = exp(-k_t * ((pi*theta/180)^2 - (pi*theta_z/180)^2)) where theta, theta_z are in degrees
+  # Implementation: theta, theta_z are already in radians, so the formula is equivalent
   psi_o <- exp(-k_t * (theta^2 - theta_z^2))
 
   # Equation 39: Global radiation on inclined surface
