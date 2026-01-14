@@ -18,7 +18,7 @@ knitr::opts_chunk$set(
 
 This vignette demonstrates the use of the `pvwattsOlmoSkoplaki` package for modeling the Mulilo De Aar PV solar plant in South Africa. The plant specifications used in this package are **assumed values** based on information documented at the [HAWI Knowledge Database](https://hawiknowledge.org/solar_power_stations_2.html#DeAarMulilo), which compiled these parameters from publicly available documents in the public domain, including Environmental Impact Assessment (EIA) submissions and similar regulatory filings.
 
-The De Aar plant is a ground-mounted photovoltaic installation using Trina TSM-PC05 polycrystalline modules. This vignette explains our modeling choices and demonstrates the complete DC and AC power forecasting pipeline.
+The De Aar plant is a ground-mounted photovoltaic installation using Trina TSM-PC05 polycrystalline modules. This vignette explains our modeling choices, demonstrates the complete DC and AC power forecasting pipeline, and shows how to use ensemble analysis to quantify model uncertainty.
 
 ## Known Plant Specifications
 
@@ -38,6 +38,18 @@ Based on publicly available information:
 
 ## Modeling Approach
 
+### Available Models
+
+The package now provides multiple transposition and cell temperature models:
+
+**Transposition Models:**
+- **Olmo et al. (1999)**: Clearness index method, no decomposition required
+- **Hay-Davies**: Anisotropic sky model with Erbs decomposition (GHI→DNI/DHI→POA)
+
+**Cell Temperature Models:**
+- **Skoplaki**: NOCT-based model with two wind coefficient variants
+- **Faiman**: Empirical model adopted in IEC 61853 standards
+
 ### PV Module Parameters
 
 The Trina TSM-230 PC05 module specifications are well-documented and provide the foundation for our modeling:
@@ -47,11 +59,13 @@ The Trina TSM-230 PC05 module specifications are well-documented and provide the
 - **NOCT**: 45°C (measured at 800 W/m², 20°C ambient, 1 m/s wind)
 - **Module efficiency at STC** (`eta_STC`): 0.141 (14.1%)
 
-These parameters are used directly in the PVWatts DC power model and the Skoplaki cell temperature calculations.
+These parameters are used directly in the PVWatts DC power model and the cell temperature calculations.
 
-### Transposition Model: Olmo et al.
+### Transposition Model Details
 
-We use the Olmo et al. (1999) transposition model to convert global horizontal irradiance (GHI) to plane-of-array (POA) irradiance. Unlike traditional transposition models that require decomposition of GHI into direct and diffuse components, the Olmo model uses a clearness index approach:
+#### Olmo et al. Model
+
+The Olmo model converts GHI to POA using a clearness index approach:
 
 $$I_{\gamma} = I \cdot \psi_o \cdot F_c$$
 
@@ -62,66 +76,65 @@ where:
 
 This model is computationally efficient and well-suited for locations like De Aar with high direct normal irradiance and clear sky conditions.
 
-### Cell Temperature Model: Skoplaki
+#### Hay-Davies Model
 
-We implement two variants of the Skoplaki cell temperature model based on Ayvazoğluyüksel & Başaran Filik (2018):
+The Hay-Davies model explicitly accounts for the anisotropic nature of sky diffuse radiation:
 
-- **Model 1** (default): Uses convection coefficient h_w = 8.91 + 2.00×v_f
-- **Model 2**: Uses convection coefficient h_w = 5.7 + 3.8×v_w, where v_w = 0.68×v_f - 0.5
+1. **Erbs Decomposition**: Estimates DNI and DHI from GHI using empirical relationships based on the clearness index
+2. **Hay-Davies Transposition**: Separates sky diffuse into isotropic and circumsolar components
 
-Both models use the full NOCT-based formulation (Equation 41 from the paper), which accounts for:
+The sky diffuse irradiance is:
+
+$$I_{d} = DHI \left[ A\cdot R_b + (1 - A) \left(\frac{1 + \cos\beta}{2}\right) \right]$$
+
+where:
+- $A = DNI/I_{extra}$ is the anisotropy index
+- $R_b = \cos(\theta)/\cos(\theta_z)$ is the projection ratio
+- $\beta$ is the tilt angle
+
+### Cell Temperature Model Details
+
+#### Skoplaki Model
+
+Two variants based on different wind convection coefficients:
+
+- **Model 1** (default): $h_w = 8.91 + 2.00 \times v_f$
+- **Model 2**: $h_w = 5.7 + 3.8 \times v_w$, where $v_w = 0.68 \times v_f - 0.5$
+
+Both use the full NOCT-based formulation (Equation 41), accounting for:
 - Wind speed effects on convection heat transfer
-- Module optical properties (τα = 0.9)
+- Module optical properties ($\tau\alpha = 0.9$)
 - Temperature-dependent efficiency losses
 
-The choice between Model 1 and Model 2 depends on the wind speed regime and module mounting configuration. Model 1 is typically recommended for ground-mounted systems like De Aar.
+#### Faiman Model
+
+A simple empirical model adopted in IEC 61853 standards:
+
+$$T_{cell} = T_{amb} + \frac{G_{POA}}{u_0 + u_1 \times v}$$
+
+where:
+- $u_0 = 25.0$ W/(m²·°C) is the constant heat loss coefficient
+- $u_1 = 6.84$ W/(m²·°C·m/s) is the wind-enhanced heat loss coefficient
+- $v$ is the wind speed in m/s
 
 ### DC Power Model: PVWatts
 
-The PVWatts DC power model is a simple, widely-validated approach:
+The PVWatts DC power model with optional Incidence Angle Modifier (IAM):
 
-$$P_{dc} = P_{dc0} \times \frac{G_{poa}}{1000} \times [1 + \gamma \times (T_{cell} - 25)]$$
+$$P_{dc} = P_{dc0} \times \frac{G_{poa} \times IAM}{1000} \times [1 + \gamma \times (T_{cell} - 25)]$$
 
-where $G_{poa}$ is in W/m² and $T_{cell}$ is in °C. This model captures the first-order temperature effects on PV performance.
+The IAM accounts for optical losses at high incidence angles:
 
-## Inverter Modeling Assumptions
+$$IAM = \cos(\theta)^{0.05}$$
 
-**Important Note**: Detailed inverter specifications for the De Aar plant are not publicly available. Therefore, we employ a simplified inverter model with the following assumptions:
-
-### Simplifying Assumptions
-
-1. **Number and Capacity**: We assume 20 inverters with 500 kW capacity each, totaling 10 MW AC capacity. This is a reasonable DC:AC ratio of approximately 1.03:1 for this type of installation.
-
-2. **Constant Efficiency**: We assume a constant inverter efficiency of 97% across all operating points. In reality:
-   - Inverter efficiency varies with loading (typically 90-98%)
-   - Efficiency is lower at very low and very high loading
-   - Modern commercial inverters typically peak at 97-98% efficiency at 20-70% loading
-   - Our 97% constant efficiency represents a reasonable average for forecasting purposes
-
-3. **Simple Clipping**: We implement hard clipping when DC power exceeds inverter capacity. In reality:
-   - Commercial inverters may implement MPPT-based power limiting
-   - Some inverters allow brief overloading (e.g., 110% for short periods)
-   - Power factor control may affect AC output
-
-4. **No Transformer Losses**: If the plant uses step-up transformers (likely for grid connection), additional losses of 0.5-1.5% would apply.
-
-5. **No Night-Time Consumption**: We do not model inverter standby power consumption or auxiliary loads.
-
-### Impact on Forecasts
-
-These simplifications mean that:
-
-- **During moderate irradiance**: The model should provide good estimates (within 2-3% of actual)
-- **During peak irradiance**: Clipping behavior may differ slightly from actual plant performance
-- **During low irradiance**: We may slightly overestimate efficiency
-- **Annual energy**: The constant 97% efficiency assumption should provide reasonable total energy estimates
-
-For more accurate site-specific modeling, the actual inverter make, model, and configuration would need to be incorporated using manufacturer efficiency curves.
+where $\theta$ is the incidence angle. This can correct 1-3% underestimation at low sun angles.
 
 ## Setup
 
 ```{r setup}
 library(pvwattsOlmoSkoplaki)
+library(dplyr)
+library(ggplot2)
 ```
 
 ## Site Parameters
@@ -158,16 +171,12 @@ wind <- c(2, 2, 2, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5, 5,
           4.5, 4.5, 4, 4, 3.5, 3, 3, 2.5, 2.5, 2, 2, 2)
 ```
 
-## DC Power Modeling
+## Default Pipeline: Olmo + Skoplaki
 
-We compute DC power using both Skoplaki cell temperature models to demonstrate their differences.
+The default configuration uses Olmo transposition and Skoplaki cell temperature (Model 1):
 
-### Skoplaki Model 1 (Default)
-
-Model 1 uses the convection coefficient h_w = 8.91 + 2.00×v_f, which is typically recommended for ground-mounted systems with good ventilation.
-
-```{r dc_model1}
-dc_out_m1 <- pv_dc_olmo_skoplaki_pvwatts(
+```{r default_pipeline}
+result_default <- pv_power_pipeline(
   time = time,
   lat = lat,
   lon = lon,
@@ -177,106 +186,279 @@ dc_out_m1 <- pv_dc_olmo_skoplaki_pvwatts(
   tilt = tilt,
   azimuth = azimuth,
   P_dc0 = P_dc0_plant,
-  skoplaki_variant = "model1"
-)
-
-# Display key results for midday hours
-dc_out_m1[10:15, c("time", "GHI", "G_poa", "T_air", "T_cell", "P_dc")]
-```
-
-### Skoplaki Model 2
-
-Model 2 uses h_w = 5.7 + 3.8×v_w (where v_w = 0.68×v_f - 0.5), which may be more appropriate for certain mounting configurations.
-
-```{r dc_model2}
-dc_out_m2 <- pv_dc_olmo_skoplaki_pvwatts(
-  time = time,
-  lat = lat,
-  lon = lon,
-  GHI = GHI,
-  T_air = T_air,
-  wind = wind,
-  tilt = tilt,
-  azimuth = azimuth,
-  P_dc0 = P_dc0_plant,
-  skoplaki_variant = "model2"
-)
-
-# Display key results for midday hours
-dc_out_m2[10:15, c("time", "GHI", "G_poa", "T_air", "T_cell", "P_dc")]
-```
-
-### Comparing Cell Temperature Models
-
-The two models typically produce different cell temperature estimates, particularly at higher wind speeds:
-
-```{r compare_temps}
-comparison <- data.frame(
-  time = dc_out_m1$time,
-  T_air = dc_out_m1$T_air,
-  wind = dc_out_m1$wind,
-  T_cell_m1 = dc_out_m1$T_cell,
-  T_cell_m2 = dc_out_m2$T_cell,
-  delta_T = dc_out_m1$T_cell - dc_out_m2$T_cell
-)
-
-# Show midday comparison
-comparison[10:15, ]
-```
-
-Model 2 typically predicts slightly lower cell temperatures at higher wind speeds due to its different wind speed transformation and convection coefficient formula.
-
-## AC Power and Inverter Clipping
-
-Now we convert DC power to AC power using our simplified inverter model. For this example, we use Model 1 output.
-
-```{r ac_power}
-ac_out <- pv_ac_simple_clipping(
-  P_dc = dc_out_m1$P_dc,
   n_inverters = 20,
-  inverter_kw = 500,
-  eta_inv = 0.97
+  inverter_kw = 500
 )
 
-# Add AC power to results
-dc_out_m1$P_ac <- ac_out$P_ac
-dc_out_m1$clipped <- ac_out$clipped
-dc_out_m1$inverter_loss <- dc_out_m1$P_dc - dc_out_m1$P_ac
-
-# Display results around peak hours
-dc_out_m1[10:15, c("time", "P_dc", "P_ac", "clipped", "inverter_loss")]
+# Display key results for daylight hours
+daylight <- result_default$GHI > 0
+result_default[daylight, c("time", "GHI", "G_poa", "T_cell", "P_dc", "P_ac")]
 ```
 
-### Daily Energy Summary
+## Alternative Model Combinations
+
+The package allows independent selection of transposition and cell temperature models. Let's compare all four combinations:
+
+```{r model_comparison}
+# Olmo + Skoplaki (default)
+result_olmo_skoplaki <- pv_power_pipeline(
+  transposition_model = "olmo",
+  cell_temp_model = "skoplaki",
+  time = time, lat = lat, lon = lon,
+  GHI = GHI, T_air = T_air, wind = wind,
+  tilt = tilt, azimuth = azimuth,
+  P_dc0 = P_dc0_plant,
+  n_inverters = 20, inverter_kw = 500
+)
+
+# Olmo + Faiman
+result_olmo_faiman <- pv_power_pipeline(
+  transposition_model = "olmo",
+  cell_temp_model = "faiman",
+  time = time, lat = lat, lon = lon,
+  GHI = GHI, T_air = T_air, wind = wind,
+  tilt = tilt, azimuth = azimuth,
+  P_dc0 = P_dc0_plant,
+  n_inverters = 20, inverter_kw = 500
+)
+
+# Hay-Davies + Skoplaki
+result_haydavies_skoplaki <- pv_power_pipeline(
+  transposition_model = "haydavies",
+  cell_temp_model = "skoplaki",
+  time = time, lat = lat, lon = lon,
+  GHI = GHI, T_air = T_air, wind = wind,
+  tilt = tilt, azimuth = azimuth,
+  P_dc0 = P_dc0_plant,
+  n_inverters = 20, inverter_kw = 500
+)
+
+# Hay-Davies + Faiman
+result_haydavies_faiman <- pv_power_pipeline(
+  transposition_model = "haydavies",
+  cell_temp_model = "faiman",
+  time = time, lat = lat, lon = lon,
+  GHI = GHI, T_air = T_air, wind = wind,
+  tilt = tilt, azimuth = azimuth,
+  P_dc0 = P_dc0_plant,
+  n_inverters = 20, inverter_kw = 500
+)
+```
+
+### Comparison at Peak Irradiance
+
+Let's compare the four models at solar noon (hour 12):
+
+```{r peak_comparison}
+peak_hour <- 12  # Solar noon
+comparison <- data.frame(
+  Model = c("Olmo+Skoplaki", "Olmo+Faiman", "Hay-Davies+Skoplaki", "Hay-Davies+Faiman"),
+  POA = c(result_olmo_skoplaki$G_poa[peak_hour],
+          result_olmo_faiman$G_poa[peak_hour],
+          result_haydavies_skoplaki$G_poa[peak_hour],
+          result_haydavies_faiman$G_poa[peak_hour]),
+  T_Cell = c(result_olmo_skoplaki$T_cell[peak_hour],
+            result_olmo_faiman$T_cell[peak_hour],
+            result_haydavies_skoplaki$T_cell[peak_hour],
+            result_haydavies_faiman$T_cell[peak_hour]),
+  P_DC = c(result_olmo_skoplaki$P_dc[peak_hour],
+           result_olmo_faiman$P_dc[peak_hour],
+           result_haydavies_skoplaki$P_dc[peak_hour],
+           result_haydavies_faiman$P_dc[peak_hour]),
+  P_AC = c(result_olmo_skoplaki$P_ac[peak_hour],
+           result_olmo_faiman$P_ac[peak_hour],
+           result_haydavies_skoplaki$P_ac[peak_hour],
+           result_haydavies_faiman$P_ac[peak_hour])
+)
+
+print(comparison)
+```
+
+The Hay-Davies transposition generally yields higher POA irradiance due to its explicit treatment of the circumsolar component, while the Faiman cell temperature model tends to predict slightly higher temperatures.
+
+## Ensemble Analysis
+
+For robustness and uncertainty quantification, the package provides ensemble functions that run all four model combinations:
+
+```{r ensemble}
+# Get all model combinations with AC power
+ensemble <- pv_power_ensemble(
+  time = time,
+  lat = lat,
+  lon = lon,
+  GHI = GHI,
+  T_air = T_air,
+  wind = wind,
+  tilt = tilt,
+  azimuth = azimuth,
+  P_dc0 = P_dc0_plant,
+  n_inverters = 20,
+  inverter_kw = 500
+)
+
+# View ensemble structure
+head(ensemble[, c("time", "model", "transposition", "cell_temp", "P_dc", "P_ac")])
+```
+
+### Ensemble Statistics
+
+Calculate ensemble statistics to understand model uncertainty:
+
+```{r ensemble_stats}
+ensemble_stats <- ensemble %>%
+  filter(GHI > 0) %>%  # Daylight hours only
+  group_by(time) %>%
+  summarise(
+    P_dc_mean = mean(P_dc),
+    P_dc_sd = sd(P_dc),
+    P_dc_min = min(P_dc),
+    P_dc_max = max(P_dc),
+    P_ac_mean = mean(P_ac),
+    P_ac_sd = sd(P_ac),
+    P_ac_min = min(P_ac),
+    P_ac_max = max(P_ac),
+    P_ac_range = max(P_ac) - min(P_ac),
+    .groups = "drop"
+  )
+
+# Display peak hours
+ensemble_stats[ensemble_stats$P_dc_mean > 1000, ]
+```
+
+The ensemble provides a measure of model uncertainty, which can be useful for:
+- Risk assessment in forecasting applications
+- Communicating confidence intervals
+- Understanding model sensitivity
+
+### Visualizing Ensemble Results
+
+```{r ensemble_plot, fig.width = 8, fig.height = 5}
+ensemble_daylight <- ensemble[ensemble$GHI > 0, ]
+
+ggplot(ensemble_daylight, aes(x = time, y = P_ac, color = model)) +
+  geom_line(linewidth = 1) +
+  labs(
+    title = "AC Power: Ensemble of 4 Model Combinations",
+    subtitle = "De Aar PV Plant",
+    x = "Time (UTC)",
+    y = "AC Power (W)",
+    color = "Model"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+```
+
+```{r ensemble_spread, fig.width = 8, fig.height = 5}
+ggplot(ensemble_stats, aes(x = time)) +
+  geom_ribbon(aes(ymin = P_ac_min, ymax = P_ac_max), fill = "lightblue", alpha = 0.5) +
+  geom_line(aes(y = P_ac_mean, color = "Mean"), linewidth = 1) +
+  labs(
+    title = "AC Power Ensemble Spread",
+    subtitle = "Shaded area shows min-max range across 4 models",
+    x = "Time (UTC)",
+    y = "AC Power (W)",
+    color = "Statistic"
+  ) +
+  theme_minimal()
+```
+
+## Daily Energy Summary
 
 ```{r energy_summary}
-# Energy in MWh (power in W × hours / 1e6)
-daily_dc_energy <- sum(dc_out_m1$P_dc) / 1e6
-daily_ac_energy <- sum(dc_out_m1$P_ac) / 1e6
-inverter_losses <- daily_dc_energy - daily_ac_energy
-clipping_losses <- sum(dc_out_m1$P_dc[dc_out_m1$clipped] -
-                       dc_out_m1$P_ac[dc_out_m1$clipped]) / 1e6
+# Calculate daily energy for each model
+daily_energy <- ensemble %>%
+  filter(GHI > 0) %>%
+  group_by(model) %>%
+  summarise(
+    daily_dc_mwh = sum(P_dc) / 1e6,
+    daily_ac_mwh = sum(P_ac) / 1e6,
+    .groups = "drop"
+)
 
-cat(sprintf("Daily DC Energy: %.2f MWh\n", daily_dc_energy))
-cat(sprintf("Daily AC Energy: %.2f MWh\n", daily_ac_energy))
-cat(sprintf("Total Inverter Losses: %.2f MWh (%.1f%%)\n",
-            inverter_losses, 100 * inverter_losses / daily_dc_energy))
-cat(sprintf("Clipping Losses: %.2f MWh (%.1f%%)\n",
-            clipping_losses, 100 * clipping_losses / daily_dc_energy))
-cat(sprintf("Number of clipped hours: %d\n", sum(dc_out_m1$clipped)))
+print(daily_energy)
+
+# Ensemble statistics for daily energy
+cat(sprintf("\nEnsemble Daily DC Energy: %.2f MWh\n",
+            mean(daily_energy$daily_dc_mwh)))
+cat(sprintf("Ensemble Daily AC Energy: %.2f MWh\n",
+            mean(daily_energy$daily_ac_mwh)))
+cat(sprintf("DC Energy Range: %.2f to %.2f MWh (%.1f%% spread)\n",
+            min(daily_energy$daily_dc_mwh),
+            max(daily_energy$daily_dc_mwh),
+            100 * (max(daily_energy$daily_dc_mwh) - min(daily_energy$daily_dc_mwh)) /
+              mean(daily_energy$daily_dc_mwh)))
 ```
 
-## Discussion
+## Model Selection Guidance
 
-### Model Selection
+### Transposition Model Choice
+
+| Factor | Olmo | Hay-Davies |
+|--------|------|------------|
+| **Complexity** | Lower (no decomposition) | Higher (requires DNI/DHI) |
+| **Input Data** | GHI only | GHI only (decomposes internally) |
+| **Best For** | Clear sky conditions, high DNI | Variable sky, diffuse conditions |
+| **Computational Cost** | Lower | Higher |
+
+### Cell Temperature Model Choice
+
+| Factor | Skoplaki | Faiman |
+|--------|----------|--------|
+| **Complexity** | Higher (NOCT-based) | Lower (empirical) |
+| **Input Data** | POA, T_air, wind, NOCT params | POA, T_air, wind |
+| **Best For** | Systems with known NOCT | Quick estimates, IEC compliance |
+| **Validation** | Industry standard | IEC 61853 standard |
+
+### Recommended Combinations
 
 For the De Aar plant:
+1. **Default**: Olmo + Skoplaki Model 1 (validated, computationally efficient)
+2. **Conservative**: Hay-Davies + Skoplaki (higher POA, validated cell temp)
+3. **Alternative**: Olmo + Faiman (simple, IEC-compliant cell temp)
+4. **High Estimate**: Hay-Davies + Faiman (both models tend toward higher values)
 
-1. **Skoplaki Model 1** is recommended as the default for ground-mounted systems with typical ventilation. It has been validated for similar installations.
+## Incidence Angle Modifier (IAM)
 
-2. **Skoplaki Model 2** may be more appropriate if the actual mounting configuration has restricted airflow or different wind exposure characteristics.
+The package includes an optional IAM to account for optical losses at high incidence angles:
 
-3. The difference between models is typically 1-3°C in cell temperature, which translates to approximately 0.5-1.5% difference in power output at high irradiance.
+```{r iam_comparison}
+# With and without IAM
+result_with_iam <- pv_power_pipeline(
+  iam_exp = 0.05,
+  time = time, lat = lat, lon = lon,
+  GHI = GHI, T_air = T_air, wind = wind,
+  tilt = tilt, azimuth = azimuth,
+  P_dc0 = P_dc0_plant,
+  n_inverters = 20, inverter_kw = 500
+)
+
+result_no_iam <- pv_power_pipeline(
+  iam_exp = FALSE,
+  time = time, lat = lat, lon = lon,
+  GHI = GHI, T_air = T_air, wind = wind,
+  tilt = tilt, azimuth = azimuth,
+  P_dc0 = P_dc0_plant,
+  n_inverters = 20, inverter_kw = 500
+)
+
+# Compare at high incidence angles (morning/evening)
+iam_comparison <- data.frame(
+  time = result_with_iam$time,
+  incidence = result_with_iam$incidence,
+  P_dc_with_iam = result_with_iam$P_dc,
+  P_dc_no_iam = result_no_iam$P_dc,
+  diff_W = result_with_iam$P_dc - result_no_iam$P_dc,
+  diff_pct = (result_with_iam$P_dc - result_no_iam$P_dc) / result_no_iam$P_dc * 100
+)
+
+# Show morning hours where IAM has most effect
+iam_comparison[iam_comparison$GHI > 200 & iam_comparison$GHI < 600,
+               c("time", "incidence", "diff_W", "diff_pct")]
+```
+
+The IAM reduces power output by 1-3% at low sun angles (high incidence angles), improving accuracy for early morning and late afternoon forecasts.
+
+## Discussion
 
 ### Limitations and Future Work
 
@@ -288,8 +470,6 @@ Our modeling approach has several limitations that should be considered:
    - Power factor control
    - Voltage-dependent losses
 
-   With actual inverter specifications, a more detailed model (e.g., Sandia inverter model) would improve accuracy.
-
 2. **Soiling Losses**: We do not model soiling accumulation on modules. De Aar is in a semi-arid region where soiling can reduce output by 2-5% between cleaning cycles.
 
 3. **Spectral Effects**: The PVWatts model does not account for spectral mismatch effects, which can be important for polycrystalline silicon modules.
@@ -300,38 +480,32 @@ Our modeling approach has several limitations that should be considered:
 
 6. **Bifacial Gain**: If the plant uses bifacial modules (not indicated in available specifications), rear-side irradiance is not modeled.
 
-Despite these limitations, the modeling pipeline provides a reasonable foundation for PV power forecasting at the De Aar plant, particularly when the focus is on day-ahead forecasting where relative changes are more important than absolute accuracy.
+### Ensemble Benefits
 
-## Using the Convenience Function
+Using ensemble analysis provides several advantages:
 
-For most use cases, the `pv_power_pipeline()` convenience function provides a simpler interface by combining DC and AC calculations in a single call:
+1. **Uncertainty Quantification**: The spread across models provides an estimate of structural uncertainty in the forecasting process.
 
-```{r convenience}
-# Same calculation using the convenience function
-result_pipeline <- pv_power_pipeline(
-  time = time,
-  lat = lat,
-  lon = lon,
-  GHI = GHI,
-  T_air = T_air,
-  wind = wind,
-  tilt = tilt,
-  azimuth = azimuth,
-  P_dc0 = P_dc0_plant,
-  skoplaki_variant = "model1",
-  n_inverters = 20,
-  inverter_kw = 500,
-  eta_inv = 0.97
-)
+2. **Robustness**: No single model is optimal for all conditions; the ensemble provides a more robust estimate.
 
-# Results are identical to the manual approach
-head(result_pipeline[, c("time", "P_dc", "P_ac", "clipped")])
-```
+3. **Validation**: Ensemble spread can be compared to forecast errors to assess whether model uncertainty is being properly captured.
 
-This convenience function is recommended for most users as it reduces boilerplate code and ensures consistent configuration between DC and AC calculations.
+4. **Communication**: Confidence intervals from ensembles are more meaningful than single-model point forecasts.
 
 ## References
 
 - Ayvazoğluyüksel, Ö., & Başaran Filik, Ü. (2018). Estimation methods of global solar radiation, cell temperature and solar power forecasting: A review and case study in Eskişehir. *Renewable and Sustainable Energy Reviews*, 91, 639-653. [https://doi.org/10.1016/j.rser.2018.03.084](https://doi.org/10.1016/j.rser.2018.03.084)
+
+- Corripio, J. G. (2003). Vectorial algebra algorithms for calculating terrain parameters from DEMs and the position of the sun for solar radiation modelling in mountainous terrain. *International Journal of Geographical Information Science*, 17(1), 1-23.
+
+- Erbs, D. G., Klein, S. A., & Duffie, J. A. (1982). Estimation of the diffuse radiation fraction for hourly, daily and monthly-average global radiation. *Solar Energy*, 28(4), 293-302.
+
+- Faiman, D. (2008). Assessing the outdoor operating temperature of photovoltaic modules. *Progress in Photovoltaics*, 16(4), 307-315. [https://doi.org/10.1002/pip.813](https://doi.org/10.1002/pip.813)
+
+- Hay, J. E., & Davies, J. A. (1980). Calculations of the solar radiation incident on an inclined surface. In *Proc. of First Canadian Solar Radiation Data Workshop* (pp. 59). Ministry of Supply and Services, Canada.
+
+- Martin, N., & Ruiz, J. M. (2001). Calculation of the PV modules angular losses under field conditions by means of an analytical model. *Solar Energy Materials and Solar Cells*, 70(1), 25-38. [https://doi.org/10.1016/S0927-0248(00)00404-5](https://doi.org/10.1016/S0927-0248(00)00404-5)
+
 - Olmo, F. J., Vida, J., Foyo, I., Castro-Diez, Y., & Alados-Arboledas, L. (1999). Prediction of global irradiance on inclined surfaces from horizontal global irradiance. *Energy*, 24(8), 689-704. [https://doi.org/10.1016/S0360-5442(99)00025-0](https://doi.org/10.1016/S0360-5442(99)00025-0)
+
 - Skoplaki, E., Boudouvis, A. G., & Palyvos, J. A. (2008). A simple correlation for the operating temperature of photovoltaic modules of arbitrary mounting. *Solar Energy Materials and Solar Cells*, 92(11), 1393-1402. [https://doi.org/10.1016/j.solmat.2008.05.016](https://doi.org/10.1016/j.solmat.2008.05.016)
