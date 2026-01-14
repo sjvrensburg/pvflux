@@ -8,7 +8,7 @@ An R package implementing a solar PV power forecasting pipeline with Olmo transp
 
 ## Public Data Notice
 
-The parameters and specifications for the Mulilo De Aar PV plant used in this package are **assumed values** based on information documented at the [HAWI Knowledge Database](https://hawiknowledge.org/solar_power_stations_2.html#DeAarMulilo). These assumed parameters were compiled by HAWI from publicly available documents in the public domain, including Environmental Impact Assessment (EIA) submissions and similar regulatory filings.
+The parameters and specifications for the Mulilo De Aar PV plant used in this package are **assumed values** based on information documented at the [HAWI Knowledge Database](https://hawiknowledge.org/solar_power_stations_2.html#DeAarMulilo). These assumed parameters were compiled by HAWI from publicly available documents, including Environmental Impact Assessment (EIA) submissions and similar regulatory filings.
 
 ## Features
 
