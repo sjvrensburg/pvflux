@@ -37,7 +37,7 @@ pv_power_pipeline(
 
 \item{GHI}{Global horizontal irradiance (W/m^2)}
 
-\item{T_air}{Ambient air temperature (°C)}
+\item{T_air}{Ambient air temperature (deg C)}
 
 \item{wind}{Wind speed (m/s)}
 
@@ -49,19 +49,19 @@ pv_power_pipeline(
 
 \item{P_dc0}{DC nameplate power (W, default 230 for Trina TSM-230 PC05 module)}
 
-\item{gamma}{Temperature coefficient of max power (1/K, default -0.0043 for TSM-230)}
+\item{gamma}{Temperature coefficient of max power (1/K, default -0.0043)}
 
-\item{skoplaki_variant}{Either "model1" or "model2" (default "model1"). Model 1 uses h_w = 8.91 + 2.00\emph{v_f, Model 2 uses h_w = 5.7 + 3.8}v_w}
+\item{skoplaki_variant}{Either "model1" or "model2" (default "model1")}
 
-\item{T_NOCT}{Nominal Operating Cell Temperature in °C (default 45 for TSM-230)}
+\item{T_NOCT}{Nominal Operating Cell Temperature (deg C, default 45)}
 
-\item{T_a_NOCT}{Ambient temperature at NOCT conditions in °C (default 20)}
+\item{T_a_NOCT}{Ambient temperature at NOCT conditions (deg C, default 20)}
 
-\item{I_NOCT}{Irradiance at NOCT conditions in W/m² (default 800)}
+\item{I_NOCT}{Irradiance at NOCT conditions (W/m^2, default 800)}
 
-\item{v_NOCT}{Wind speed at NOCT conditions in m/s (default 1)}
+\item{v_NOCT}{Wind speed at NOCT conditions (m/s, default 1)}
 
-\item{eta_STC}{Module efficiency at STC (default 0.141 for TSM-230)}
+\item{eta_STC}{Module efficiency at STC (default 0.141)}
 
 \item{tau_alpha}{Product of transmittance and absorption coefficient (default 0.9)}
 
@@ -72,10 +72,28 @@ pv_power_pipeline(
 \item{eta_inv}{Inverter efficiency (default 0.97)}
 }
 \value{
-Data frame with G_poa, T_cell, P_dc, P_ac, clipped flag, etc.
+Data frame with columns: time, GHI, G_poa, T_air, wind, T_cell, P_dc,
+P_ac, clipped, P_ac_rated, zenith, sun_azimuth, incidence, skoplaki
 }
 \description{
-Convenience function that calculates both DC power (using Olmo transposition, Skoplaki cell temperature, and PVWatts) and AC power (using simple inverter clipping) in a single call.
+Convenience function that calculates both DC and AC power by
+chaining together all four models:
+\enumerate{
+\item \strong{Olmo et al. transposition}: GHI to POA irradiance
+\item \strong{Skoplaki cell temperature}: POA + weather to cell temperature
+\item \strong{PVWatts DC model}: POA + cell temp to DC power
+\item \strong{Simple AC clipping}: DC power to AC power with inverter losses
+}
+
+This is the highest-level convenience function in the package. For more control
+over individual steps, use the underlying functions:
+\itemize{
+\item \code{\link{olmo_transposition}} - Transposition model only
+\item \code{\link{skoplaki_cell_temperature}} - Cell temperature only
+\item \code{\link{pvwatts_dc}} - DC power calculation only
+\item \code{\link{pv_ac_simple_clipping}} - AC conversion only
+\item \code{\link{pv_dc_olmo_skoplaki_pvwatts}} - DC pipeline (steps 1-3)
+}
 }
 \examples{
 \dontrun{
@@ -95,7 +113,7 @@ result <- pv_power_pipeline(
   wind = wind,
   tilt = 20,
   azimuth = 0,
-  P_dc0 = 44880 * 230,  # 44,880 modules × 230W
+  P_dc0 = 44880 * 230,  # 44,880 modules x 230W
   n_inverters = 20,
   inverter_kw = 500
 )
@@ -103,4 +121,11 @@ result <- pv_power_pipeline(
 head(result)
 }
 
+}
+\seealso{
+\code{\link{olmo_transposition}} for transposition model details
+\code{\link{skoplaki_cell_temperature}} for cell temperature model details
+\code{\link{pvwatts_dc}} for DC power model details
+\code{\link{pv_ac_simple_clipping}} for AC conversion details
+\code{\link{pv_dc_olmo_skoplaki_pvwatts}} for DC-only pipeline
 }

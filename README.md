@@ -106,53 +106,74 @@ head(dc_out)
 
 ## Function Reference
 
-### `pv_power_pipeline()`
+### Individual Model Functions
 
-**Convenience function** that calculates both DC and AC power in a single call. This is the recommended function for most users.
+These functions implement individual models and can be used independently for maximum flexibility:
 
-**Key Parameters:**
-- All parameters from `pv_dc_olmo_skoplaki_pvwatts()` (see below)
-- `n_inverters`: Number of inverters (default 20)
-- `inverter_kw`: kW rating per inverter (default 500)
-- `eta_inv`: Inverter efficiency (default 0.97)
+#### `olmo_transposition()`
 
-**Returns:** Data frame with POA irradiance, cell temperature, DC power, AC power, clipping flags, and solar position
+Converts GHI to POA irradiance using the Olmo et al. (1999) clearness index method.
 
-### `pv_dc_olmo_skoplaki_pvwatts()`
+```r
+olmo_transposition(time, lat, lon, GHI, tilt, azimuth, albedo = 0.2)
+```
 
-Main DC power pipeline combining Olmo transposition, Skoplaki cell temperature, and PVWatts model.
+**Returns:** Data frame with G_poa, zenith, sun_azimuth, incidence, k_t, I_0
 
-**Key Parameters:**
-- `time`: POSIXct vector of times (UTC recommended)
-- `lat`, `lon`: Site coordinates in degrees
-- `GHI`: Global horizontal irradiance (W/m²)
-- `T_air`: Ambient air temperature (°C)
-- `wind`: Wind speed (m/s)
-- `tilt`: Panel tilt angle (degrees)
-- `azimuth`: Panel azimuth (degrees, 0 = north)
-- `P_dc0`: DC nameplate power (W, default 230)
-- `gamma`: Temperature coefficient (1/K, default -0.0043)
-- `skoplaki_variant`: "model1" or "model2" (default "model1")
-- `T_NOCT`: Nominal Operating Cell Temperature (°C, default 45)
-- `T_a_NOCT`: Ambient temperature at NOCT conditions (°C, default 20)
-- `I_NOCT`: Irradiance at NOCT conditions (W/m², default 800)
-- `v_NOCT`: Wind speed at NOCT conditions (m/s, default 1)
-- `eta_STC`: Module efficiency at STC (default 0.141)
-- `tau_alpha`: Product of transmittance and absorption coefficient (default 0.9)
+#### `skoplaki_cell_temperature()`
 
-**Returns:** Data frame with POA irradiance, cell temperature, DC power, and solar position
+Estimates cell temperature using the Skoplaki model (Equation 41).
 
-### `pv_ac_simple_clipping()`
+```r
+skoplaki_cell_temperature(G_poa, T_air, wind, variant = "model1", ...)
+```
+
+**Returns:** Numeric vector of cell temperatures (°C)
+
+#### `pvwatts_dc()`
+
+Calculates DC power using the PVWatts model with temperature correction.
+
+```r
+pvwatts_dc(G_poa, T_cell, P_dc0 = 230, gamma = -0.0043)
+```
+
+**Returns:** Numeric vector of DC power (W)
+
+#### `pv_ac_simple_clipping()`
 
 Applies inverter efficiency and power clipping to convert DC to AC power.
 
-**Key Parameters:**
-- `P_dc`: DC power (W)
-- `n_inverters`: Number of inverters (default 20)
-- `inverter_kw`: kW rating per inverter (default 500)
-- `eta_inv`: Inverter efficiency (default 0.97)
+```r
+pv_ac_simple_clipping(P_dc, n_inverters = 20, inverter_kw = 500, eta_inv = 0.97)
+```
 
-**Returns:** List with AC power, clipping flags, and rated AC power
+**Returns:** List with P_ac, clipped flag, and P_ac_rated
+
+### Convenience Pipeline Functions
+
+These functions chain multiple models together for common workflows:
+
+#### `pv_dc_olmo_skoplaki_pvwatts()`
+
+DC power pipeline combining Olmo transposition → Skoplaki cell temperature → PVWatts DC.
+
+```r
+pv_dc_olmo_skoplaki_pvwatts(time, lat, lon, GHI, T_air, wind, tilt, azimuth, ...)
+```
+
+**Returns:** Data frame with G_poa, T_cell, P_dc, and solar position data
+
+#### `pv_power_pipeline()`
+
+Complete pipeline (DC + AC) combining all four models. **Recommended for most users.**
+
+```r
+pv_power_pipeline(time, lat, lon, GHI, T_air, wind, tilt, azimuth,
+                  P_dc0 = 230, n_inverters = 20, inverter_kw = 500, ...)
+```
+
+**Returns:** Data frame with G_poa, T_cell, P_dc, P_ac, clipped flag, and solar position
 
 ## Vignette
 
