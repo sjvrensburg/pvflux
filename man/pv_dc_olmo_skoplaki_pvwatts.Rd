@@ -14,6 +14,7 @@ pv_dc_olmo_skoplaki_pvwatts(
   tilt,
   azimuth,
   albedo = 0.2,
+  iam_exp = 0.05,
   P_dc0 = 230,
   gamma = -0.0043,
   skoplaki_variant = c("model1", "model2"),
@@ -44,6 +45,9 @@ pv_dc_olmo_skoplaki_pvwatts(
 
 \item{albedo}{Ground albedo (default 0.2)}
 
+\item{iam_exp}{IAM exponent for power-law model. Default 0.05. Set to NA or
+FALSE to disable IAM correction.}
+
 \item{P_dc0}{DC nameplate power (W, default 230 for Trina TSM-230 PC05 module)}
 
 \item{gamma}{Temperature coefficient of max power (1/K, default -0.0043)}
@@ -64,14 +68,14 @@ pv_dc_olmo_skoplaki_pvwatts(
 }
 \value{
 Data frame with columns: time, GHI, G_poa, T_air, wind, T_cell, P_dc,
-zenith, sun_azimuth, incidence, skoplaki
+zenith, sun_azimuth, incidence, skoplaki, iam (if IAM enabled)
 }
 \description{
 Convenience function that computes DC power by chaining together:
 \enumerate{
 \item \strong{Olmo et al. transposition}: GHI to POA irradiance
 \item \strong{Skoplaki cell temperature}: POA + weather to cell temperature
-\item \strong{PVWatts DC model}: POA + cell temp to DC power
+\item \strong{PVWatts DC model}: POA + cell temp to DC power (with optional IAM)
 }
 
 This function provides a complete DC power calculation pipeline. For more
@@ -93,6 +97,10 @@ Skoplaki, E., Boudouvis, A. G., & Palyvos, J. A. (2008). A simple correlation
 for the operating temperature of photovoltaic modules of arbitrary mounting.
 Solar Energy Materials and Solar Cells, 92(11), 1393-1402.
 \doi{10.1016/j.solmat.2008.05.016}
+
+Martin, N., & Ruiz, J. M. (2001). Calculation of the PV modules angular
+losses under field conditions by means of an analytical model. Solar Energy
+Materials and Solar Cells, 70(1), 25-38. \doi{10.1016/S0927-0248(00)00404-5}
 }
 \seealso{
 \code{\link{olmo_transposition}} for transposition model details
