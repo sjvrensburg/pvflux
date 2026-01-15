@@ -12,7 +12,10 @@
 #'
 #' where \eqn{\theta_z} is the solar zenith angle.
 #'
-#' @param time POSIXct vector of times (UTC recommended)
+#' @param time Timestamps as POSIXct, POSIXlt, character, or numeric. If a timezone
+#'   is specified, times are internally converted to UTC for solar position
+#'   calculations and returned in the original timezone. If no timezone is
+#'   specified, UTC is assumed. See \code{\link{time_utils}} for details.
 #' @param lat Latitude in degrees
 #' @param lon Longitude in degrees
 #' @param GHI Global horizontal irradiance (W/m^2)
@@ -65,21 +68,23 @@ erbs_decomposition <- function(
   max_zenith = 87,
   solar_constant = 1366.1
 ) {
-  stopifnot(length(time) == length(GHI))
+  # Prepare time: convert to UTC for calculations, store original timezone
+  time_info <- prepare_time_utc(time)
+  time_utc <- time_info$time_utc
+  original_tz <- time_info$original_tz
 
-  # Convert time to Julian Day
-  jd <- JD(time)
+  stopifnot(length(time_utc) == length(GHI))
 
-  # Extract timezone from POSIXct object (in hours)
-  tz_offset <- as.numeric(format(time[1], "%z")) / 100
+  # Convert time to Julian Day (using UTC time)
+  jd <- JD(time_utc)
 
-  # Calculate sun position
-  sv <- sunvector(jd, lat, lon, tz_offset)
+  # Calculate sun position (timezone = 0 since we're using UTC)
+  sv <- sunvector(jd, lat, lon, 0)
   sp <- sunpos(sv)
   theta_z_deg <- sp[, 2]  # Solar zenith angle in degrees
 
-  # Get day of year
-  doy <- as.numeric(format(time, "%j"))
+  # Get day of year (from UTC time)
+  doy <- as.numeric(format(time_utc, "%j"))
 
   # Calculate extraterrestrial radiation (normal to sun)
   dni_extra <- get_extra_radiation_spencer(doy, solar_constant)
@@ -112,8 +117,11 @@ erbs_decomposition <- function(
   dni <- ifelse(bad_values, 0, dni)
   dhi <- ifelse(bad_values, GHI, dhi)
 
+  # Restore original timezone for output
+  time_out <- restore_time_tz(time_utc, original_tz)
+
   data.frame(
-    time = time,
+    time = time_out,
     GHI = GHI,
     DNI = dni,
     DHI = dhi,

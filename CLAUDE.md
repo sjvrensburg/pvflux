@@ -83,6 +83,27 @@ All pipeline functions return a data frame with:
 - **Model-specific**: `sun_azimuth` (olmo), `azimuth/DNI/DHI/ai/rb` (haydavies)
 - **IAM**: `iam` column added if `iam_exp` is enabled
 
+## Timezone Handling
+
+The package uses `lubridate` for consistent timezone handling:
+
+1. **Input flexibility**: `time` parameter accepts POSIXct, POSIXlt, character, or numeric timestamps
+2. **Automatic UTC conversion**: All solar position calculations use UTC internally
+3. **Timezone preservation**: Output timestamps are returned in the original input timezone
+4. **Default behavior**: If no timezone is specified, UTC is assumed
+
+**Key functions**: `prepare_time_utc()` and `restore_time_tz()` in `R/time_utils.R`
+
+**Example**:
+```r
+# Local time input (SAST = UTC+2)
+time_local <- as.POSIXct("2026-01-15 12:00", tz = "Africa/Johannesburg")
+
+# Package converts to UTC (10:00 UTC), computes solar position, returns SAST
+result <- erbs_decomposition(time = time_local, lat = -30.6, lon = 24.0, GHI = 1000)
+attr(result$time, "tzone")  # "Africa/Johannesburg"
+```
+
 ## Important Model Details
 
 ### Transposition Models

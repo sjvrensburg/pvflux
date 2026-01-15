@@ -147,6 +147,38 @@ azimuth <- 0
 P_dc0_plant <- 10322400  # 44880 modules * 230 W
 ```
 
+## Timezone Handling
+
+The `pvflux` package handles timezones automatically and consistently:
+
+1. **Input flexibility**: Timestamps can be provided as POSIXct, POSIXlt, character, or numeric (seconds since epoch)
+2. **Automatic UTC conversion**: All internal solar position calculations are performed in UTC
+3. **Timezone preservation**: Output timestamps are returned in the original input timezone
+4. **Default behavior**: If no timezone is specified, UTC is assumed
+
+This means you can work with local time data without manual conversion:
+
+```{r timezone_example, eval=FALSE}
+# Using local South African time (SAST = UTC+2)
+time_local <- seq(as.POSIXct("2026-01-15 00:00", tz = "Africa/Johannesburg"),
+                  length.out = 24, by = "hour")
+
+# The package converts to UTC internally, computes solar position,
+# then returns results in the original "Africa/Johannesburg" timezone
+result_local <- erbs_decomposition(
+  time = time_local,
+  lat = -30.6279,
+  lon = 24.0054,
+  GHI = c(0, 0, 0, 0, 0, 50, 200, 450, 700, 850, 950, 1000,
+          980, 900, 750, 550, 350, 150, 20, 0, 0, 0, 0, 0)
+)
+
+# Output timestamps preserve the original timezone
+attr(result_local$time, "tzone")  # "Africa/Johannesburg"
+```
+
+For consistency with weather data sources (which typically use UTC), we recommend using UTC timestamps:
+
 ## Example Weather Data
 
 For this example, we create a typical summer day profile for De Aar. In practice, these would come from weather forecast models (NWP) or measurement stations.

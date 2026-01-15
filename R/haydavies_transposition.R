@@ -18,7 +18,10 @@
 #' projection ratio (cosine of angle of incidence to cosine of zenith angle),
 #' and \eqn{\beta} is the tilt angle of the array.
 #'
-#' @param time POSIXct vector of times (UTC recommended)
+#' @param time Timestamps as POSIXct, POSIXlt, character, or numeric. If a timezone
+#'   is specified, times are internally converted to UTC for solar position
+#'   calculations and returned in the original timezone. If no timezone is
+#'   specified, UTC is assumed. See \code{\link{time_utils}} for details.
 #' @param lat Latitude in degrees
 #' @param lon Longitude in degrees
 #' @param GHI Global horizontal irradiance (W/m^2)
@@ -95,18 +98,20 @@ haydavies_transposition <- function(
   min_cos_zenith = 0.01745,
   solar_constant = 1366.1
 ) {
-  stopifnot(length(time) == length(GHI))
-  stopifnot(length(time) == length(DNI))
-  stopifnot(length(time) == length(DHI))
+  # Prepare time: convert to UTC for calculations, store original timezone
+  time_info <- prepare_time_utc(time)
+  time_utc <- time_info$time_utc
+  original_tz <- time_info$original_tz
 
-  # Convert time to Julian Day
-  jd <- JD(time)
+  stopifnot(length(time_utc) == length(GHI))
+  stopifnot(length(time_utc) == length(DNI))
+  stopifnot(length(time_utc) == length(DHI))
 
-  # Extract timezone from POSIXct object (in hours)
-  tz_offset <- as.numeric(format(time[1], "%z")) / 100
+  # Convert time to Julian Day (using UTC time)
+  jd <- JD(time_utc)
 
-  # Calculate sun vector and position
-  sv <- sunvector(jd, lat, lon, tz_offset)
+  # Calculate sun vector and position (timezone = 0 since we're using UTC)
+  sv <- sunvector(jd, lat, lon, 0)
   sp <- sunpos(sv)
 
   # Extract zenith and azimuth
@@ -146,7 +151,7 @@ haydavies_transposition <- function(
   # Calculate Extraterrestrial Radiation and Anisotropy Index
   # =========================================================================
 
-  doy <- as.numeric(format(time, "%j"))
+  doy <- as.numeric(format(time_utc, "%j"))
   dni_extra <- get_extra_radiation_spencer(doy, solar_constant)
 
   # Anisotropy index: ratio of beam irradiance to extraterrestrial irradiance
@@ -196,8 +201,11 @@ haydavies_transposition <- function(
   poa_ground_diffuse[nighttime] <- 0
   poa_diffuse[nighttime] <- 0
 
+  # Restore original timezone for output
+  time_out <- restore_time_tz(time_utc, original_tz)
+
   data.frame(
-    time = time,
+    time = time_out,
     GHI = GHI,
     DNI = DNI,
     DHI = DHI,

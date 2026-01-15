@@ -15,7 +15,10 @@
 #' \code{\link{erbs_decomposition}}, \code{\link{haydavies_transposition}},
 #' \code{\link{faiman_cell_temperature}}, and \code{\link{pvwatts_dc}}.
 #'
-#' @param time POSIXct vector of times (UTC recommended)
+#' @param time Timestamps as POSIXct, POSIXlt, character, or numeric. If a timezone
+#'   is specified, times are internally converted to UTC for solar position
+#'   calculations and returned in the original timezone. If no timezone is
+#'   specified, UTC is assumed. See \code{\link{time_utils}} for details.
 #' @param lat Latitude in degrees
 #' @param lon Longitude in degrees
 #' @param GHI Global horizontal irradiance (W/m^2)

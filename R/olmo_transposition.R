@@ -34,7 +34,10 @@
 #' is recommended instead, as it provides more reliable estimates across diverse
 #' locations and conditions.
 #'
-#' @param time POSIXct vector of times (UTC recommended)
+#' @param time Timestamps as POSIXct, POSIXlt, character, or numeric. If a timezone
+#'   is specified, times are internally converted to UTC for solar position
+#'   calculations and returned in the original timezone. If no timezone is
+#'   specified, UTC is assumed. See \code{\link{time_utils}} for details.
 #' @param lat Latitude in degrees
 #' @param lon Longitude in degrees
 #' @param GHI Global horizontal irradiance (W/m^2)
@@ -94,17 +97,18 @@ olmo_transposition <- function(
   azimuth,
   albedo = 0.2
 ) {
-  stopifnot(length(time) == length(GHI))
+  # Prepare time: convert to UTC for calculations, store original timezone
+  time_info <- prepare_time_utc(time)
+  time_utc <- time_info$time_utc
+  original_tz <- time_info$original_tz
 
+  stopifnot(length(time_utc) == length(GHI))
 
-  # Convert time to Julian Day
-  jd <- JD(time)
+  # Convert time to Julian Day (using UTC time)
+  jd <- JD(time_utc)
 
-  # Extract timezone from POSIXct object (in hours)
-  tz_offset <- as.numeric(format(time[1], "%z")) / 100
-
-  # Calculate sun vector and position
-  sv <- sunvector(jd, lat, lon, tz_offset)
+  # Calculate sun vector and position (timezone = 0 since we're using UTC)
+  sv <- sunvector(jd, lat, lon, 0)
   sp <- sunpos(sv)
 
   # Extract zenith and azimuth from sunpos (column 2 = zenith, column 1 = azimuth)
@@ -133,8 +137,8 @@ olmo_transposition <- function(
   # Solar constant (W/m^2)
   I_sol <- 1367
 
-  # Day of year
-  doy <- as.numeric(format(time, "%j"))
+  # Day of year (from UTC time)
+  doy <- as.numeric(format(time_utc, "%j"))
 
   # Eccentricity correction factor (Eq. 33 component)
   eccentricity <- 1 + 0.033 * cos(2 * pi * doy / 365)
@@ -166,8 +170,11 @@ olmo_transposition <- function(
   # Handle nighttime (when sun is below horizon)
   G_poa[cosz <= 0] <- 0
 
+  # Restore original timezone for output
+  time_out <- restore_time_tz(time_utc, original_tz)
+
   data.frame(
-    time = time,
+    time = time_out,
     GHI = GHI,
     G_poa = G_poa,
     zenith = theta_z_deg,

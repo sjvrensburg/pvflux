@@ -36,7 +36,10 @@ pv_power_pipeline(
 )
 }
 \arguments{
-\item{time}{POSIXct vector of times (UTC recommended)}
+\item{time}{Timestamps as POSIXct, POSIXlt, character, or numeric. If a timezone
+is specified, times are internally converted to UTC for solar position
+calculations and returned in the original timezone. If no timezone is
+specified, UTC is assumed. See \code{\link{time_utils}} for details.}
 
 \item{lat}{Latitude in degrees}
 
