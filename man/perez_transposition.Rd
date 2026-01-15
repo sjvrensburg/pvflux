@@ -95,6 +95,20 @@ The Perez model uses an 8-bin classification system for sky conditions:
 \item \eqn{\\epsilon > 6.200}: Very clear
 }
 }
+\section{Numerical Stability}{
+
+The epsilon (sky clearness) calculation involves division by DHI, which can
+cause numerical issues when DHI approaches zero (clear sky conditions).
+This implementation handles edge cases as follows:
+\itemize{
+\item \strong{DHI <= 0}: Sky diffuse component is set to 0 (no diffuse to transpose)
+\item \strong{Nighttime}: All components are set to 0
+\item \strong{Numerical overflow}: Invalid epsilon values result in sky diffuse = 0
+}
+The beam and ground-reflected components are computed independently and
+remain valid even when the sky diffuse calculation encounters edge cases.
+}
+
 \examples{
 \dontrun{
 time <- seq(as.POSIXct("2026-01-15 06:00", tz = "UTC"),

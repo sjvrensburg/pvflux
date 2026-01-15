@@ -32,6 +32,18 @@
 #'   \item \eqn{\\epsilon > 6.200}: Very clear
 #' }
 #'
+#' @section Numerical Stability:
+#' The epsilon (sky clearness) calculation involves division by DHI, which can
+#' cause numerical issues when DHI approaches zero (clear sky conditions).
+#' This implementation handles edge cases as follows:
+#' \itemize{
+#'   \item \strong{DHI <= 0}: Sky diffuse component is set to 0 (no diffuse to transpose)
+#'   \item \strong{Nighttime}: All components are set to 0
+#'   \item \strong{Numerical overflow}: Invalid epsilon values result in sky diffuse = 0
+#' }
+#' The beam and ground-reflected components are computed independently and
+#' remain valid even when the sky diffuse calculation encounters edge cases.
+#'
 #' @param time Timestamps as POSIXct, POSIXlt, character, or numeric. If a timezone
 #'   is specified, times are internally converted to UTC for solar position
 #'   calculations and returned in the original timezone. If no timezone is
@@ -183,21 +195,29 @@ perez_transposition <- function(
   delta <- DHI * airmass / dni_extra
 
   # Epsilon: Sky clearness parameter
-  # eps = (DHI + DNI) / DHI + kappa * z^3) / (1 + kappa * z^3)
+  # eps = ((DHI + DNI) / DHI + kappa * z^3) / (1 + kappa * z^3)
+  # Note: When DHI = 0, this produces Inf. We handle this below.
   kappa <- 1.041  # For solar_zenith in radians
   z <- theta_z  # Zenith in radians
 
-  eps <- ((DHI + DNI) / DHI + kappa * z^3) / (1 + kappa * z^3)
+  # Protect against division by zero: use small positive value for DHI <= 0
+  # This prevents Inf/NaN while maintaining numerical stability
+  dhi_safe <- pmax(DHI, 1e-6)
+  eps <- ((dhi_safe + DNI) / dhi_safe + kappa * z^3) / (1 + kappa * z^3)
 
   # Bin epsilon into 8 categories
+
   # Perez et al define clearness bins according to specific rules
   # 1 = overcast ... 8 = clear
   ebin <- as.integer(cut(eps, breaks = c(-Inf, 1.065, 1.23, 1.5, 1.95, 2.8, 4.5, 6.2, Inf),
                          labels = FALSE, right = TRUE))
 
-  # Set NA eps to bin 9 (will get NaN coefficients)
-  # This matches pvlib's behavior where invalid eps gets NaN coefficients
-  ebin[is.na(eps)] <- 9
+  # Mark invalid conditions for later zeroing:
+  # - NA epsilon (from NA airmass at night)
+  # - DHI <= 0 (no diffuse irradiance to transpose)
+  # - Inf epsilon (numerical overflow)
+  invalid_diffuse <- is.na(eps) | !is.finite(eps) | (DHI <= 0)
+  ebin[is.na(ebin) | invalid_diffuse] <- 9
 
   # =========================================================================
   # Get Perez Coefficients (allsitescomposite1990)
@@ -262,8 +282,10 @@ perez_transposition <- function(
   # Total sky diffuse
   poa_sky_diffuse <- pmax(DHI * (term1 + term2 + term3), 0)
 
-  # Set nighttime values to zero
-  poa_sky_diffuse[is.na(airmass)] <- 0
+  # Handle invalid conditions: nighttime (NA airmass), DHI <= 0, or numerical issues
+  # Set sky diffuse to 0 for these cases rather than propagating NaN
+  poa_sky_diffuse[invalid_diffuse] <- 0
+  poa_sky_diffuse[is.na(poa_sky_diffuse)] <- 0
 
   # =========================================================================
   # Beam Component (Direct Normal Irradiance projected onto tilted surface)
