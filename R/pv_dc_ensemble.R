@@ -1,20 +1,29 @@
 #' @title PV DC Power Ensemble - All Model Combinations
 #'
-#' @description Computes DC power using all combinations of transposition
-#' and cell temperature models, returning results in a format suitable for
-#' ensemble analysis.
+#' @description Computes DC power using all combinations of transposition,
+#' decomposition, and cell temperature models, returning results in a format
+#' suitable for ensemble analysis.
 #'
-#' This function runs 8 model combinations:
+#' This function runs a complete ensemble of model combinations covering:
 #' \enumerate{
-#'   \item Hay-Davies transposition + Skoplaki cell temperature
-#'   \item Hay-Davies transposition + Faiman cell temperature
-#'   \item Reindl transposition + Skoplaki cell temperature
-#'   \item Reindl transposition + Faiman cell temperature
-#'   \item Perez transposition + Skoplaki cell temperature
-#'   \item Perez transposition + Faiman cell temperature
-#'   \item Olmo transposition + Skoplaki cell temperature
-#'   \item Olmo transposition + Faiman cell temperature
+#'   \item Hay-Davies + ERBS decomposition + Skoplaki (model1/model2)
+#'   \item Hay-Davies + ERBS decomposition + Faiman
+#'   \item Hay-Davies + Boland decomposition + Skoplaki (model1/model2)
+#'   \item Hay-Davies + Boland decomposition + Faiman
+#'   \item Reindl + ERBS decomposition + Skoplaki (model1/model2)
+#'   \item Reindl + ERBS decomposition + Faiman
+#'   \item Reindl + Boland decomposition + Skoplaki (model1/model2)
+#'   \item Reindl + Boland decomposition + Faiman
+#'   \item Perez + ERBS decomposition + Skoplaki (model1/model2)
+#'   \item Perez + ERBS decomposition + Faiman
+#'   \item Perez + Boland decomposition + Skoplaki (model1/model2)
+#'   \item Perez + Boland decomposition + Faiman
+#'   \item Olmo + Skoplaki (model1/model2)
+#'   \item Olmo + Faiman
 #' }
+#'
+#' The skoplaki_variant parameter only affects results when cell_temp = "skoplaki".
+#' For faiman cell temperature, only one variant is run since results are identical.
 #'
 #' @param time Timestamps as POSIXct, POSIXlt, character, or numeric. If a timezone
 #'   is specified, times are internally converted to UTC for solar position
@@ -34,7 +43,6 @@
 #' @param gamma Temperature coefficient of max power (1/K, default -0.0043)
 #' @param min_cos_zenith Minimum value of cos(zenith) for Hay-Davies Rb calculation.
 #'   Default: 0.01745.
-#' @param skoplaki_variant Either "model1" or "model2" (default "model1").
 #' @param T_NOCT Nominal Operating Cell Temperature (deg C, default 45).
 #' @param T_a_NOCT Ambient temperature at NOCT conditions (deg C, default 20).
 #' @param I_NOCT Irradiance at NOCT conditions (W/m^2, default 800).
@@ -49,10 +57,11 @@
 #' @return Data frame with columns:
 #' \itemize{
 #'   \item time, GHI, T_air, wind - Input data
-#'   \item model - Model combination identifier (e.g., "olmo_skoplaki")
+#'   \item model - Model combination identifier (e.g., "haydavies_erbs_skoplaki_model1")
 #'   \item transposition - Transposition model used
-#'   \item decomposition - Decomposition model used (default: "erbs")
+#'   \item decomposition - Decomposition model used (erbs/boland for applicable models, NA for olmo)
 #'   \item cell_temp - Cell temperature model used
+#'   \item skoplaki_variant - Skoplaki model variant used (model1/model2)
 #'   \item G_poa - Plane-of-array irradiance (W/m^2)
 #'   \item T_cell - Cell temperature (deg C)
 #'   \item P_dc - DC power output (W)
@@ -78,6 +87,9 @@
 #'   azimuth = 0
 #' )
 #'
+#' # View unique model combinations
+#' unique(ensemble_result$model)
+#'
 #' # Calculate ensemble statistics
 #' ensemble_stats <- aggregate(P_dc ~ time, data = ensemble_result,
 #'                            FUN = function(x) c(mean = mean(x), sd = sd(x)))
@@ -102,7 +114,6 @@ pv_dc_ensemble <- function(
   P_dc0 = 230,
   gamma = -0.0043,
   min_cos_zenith = 0.01745,
-  skoplaki_variant = c("model1", "model2"),
   T_NOCT = 45,
   T_a_NOCT = 20,
   I_NOCT = 800,
@@ -112,19 +123,140 @@ pv_dc_ensemble <- function(
   u0 = 25.0,
   u1 = 6.84
 ) {
-  skoplaki_variant <- match.arg(skoplaki_variant)
+  # Define transposition models that need decomposition
+  decomp_transpositions <- c("haydavies", "reindl", "perez")
 
-  # Define all model combinations
-  combinations <- expand.grid(
-    transposition = c("haydavies", "reindl", "perez", "olmo"),
-    cell_temp = c("skoplaki", "faiman"),
-    stringsAsFactors = FALSE
+  # Run ensemble: only run skoplaki_variant when it affects results
+  results <- list()
+
+  # For transposition models needing decomposition
+  for (transposition in decomp_transpositions) {
+    for (decomp_model in c("erbs", "boland")) {
+      # Faiman cell temp (skoplaki_variant doesn't affect result)
+      result <- pv_dc_pipeline(
+        time = time,
+        lat = lat,
+        lon = lon,
+        GHI = GHI,
+        T_air = T_air,
+        wind = wind,
+        tilt = tilt,
+        azimuth = azimuth,
+        albedo = albedo,
+        transposition_model = transposition,
+        decomposition_model = decomp_model,
+        cell_temp_model = "faiman",
+        iam_exp = iam_exp,
+        P_dc0 = P_dc0,
+        gamma = gamma,
+        min_cos_zenith = min_cos_zenith,
+        skoplaki_variant = "model1",  # Doesn't affect faiman, but required
+        T_NOCT = T_NOCT,
+        T_a_NOCT = T_a_NOCT,
+        I_NOCT = I_NOCT,
+        v_NOCT = v_NOCT,
+        eta_STC = eta_STC,
+        tau_alpha = tau_alpha,
+        u0 = u0,
+        u1 = u1
+      )
+      result$model <- paste(transposition, decomp_model, "faiman", sep = "_")
+      result$skoplaki_variant <- NA
+      cols_to_keep <- c("time", "GHI", "T_air", "wind", "model", "transposition",
+                        "decomposition", "cell_temp", "skoplaki_variant",
+                        "G_poa", "T_cell", "P_dc")
+      if (!isFALSE(iam_exp) && !is.na(iam_exp)) {
+        cols_to_keep <- c(cols_to_keep, "iam")
+      }
+      results[[length(results) + 1]] <- result[, cols_to_keep]
+
+      # Skoplaki cell temp (both variants)
+      for (skoplaki_variant in c("model1", "model2")) {
+        result <- pv_dc_pipeline(
+          time = time,
+          lat = lat,
+          lon = lon,
+          GHI = GHI,
+          T_air = T_air,
+          wind = wind,
+          tilt = tilt,
+          azimuth = azimuth,
+          albedo = albedo,
+          transposition_model = transposition,
+          decomposition_model = decomp_model,
+          cell_temp_model = "skoplaki",
+          iam_exp = iam_exp,
+          P_dc0 = P_dc0,
+          gamma = gamma,
+          min_cos_zenith = min_cos_zenith,
+          skoplaki_variant = skoplaki_variant,
+          T_NOCT = T_NOCT,
+          T_a_NOCT = T_a_NOCT,
+          I_NOCT = I_NOCT,
+          v_NOCT = v_NOCT,
+          eta_STC = eta_STC,
+          tau_alpha = tau_alpha,
+          u0 = u0,
+          u1 = u1
+        )
+
+        # Rename skoplaki column to skoplaki_variant
+        result$skoplaki_variant <- result$skoplaki
+        result$skoplaki <- NULL
+
+        result$model <- paste(transposition, decomp_model, "skoplaki", skoplaki_variant, sep = "_")
+
+        cols_to_keep <- c("time", "GHI", "T_air", "wind", "model", "transposition",
+                          "decomposition", "cell_temp", "skoplaki_variant",
+                          "G_poa", "T_cell", "P_dc")
+        if (!isFALSE(iam_exp) && !is.na(iam_exp)) {
+          cols_to_keep <- c(cols_to_keep, "iam")
+        }
+        results[[length(results) + 1]] <- result[, cols_to_keep]
+      }
+    }
+  }
+
+  # Olmo (no decomposition needed)
+  # Faiman cell temp
+  result <- pv_dc_pipeline(
+    time = time,
+    lat = lat,
+    lon = lon,
+    GHI = GHI,
+    T_air = T_air,
+    wind = wind,
+    tilt = tilt,
+    azimuth = azimuth,
+    albedo = albedo,
+    transposition_model = "olmo",
+    cell_temp_model = "faiman",
+    iam_exp = iam_exp,
+    P_dc0 = P_dc0,
+    gamma = gamma,
+    min_cos_zenith = min_cos_zenith,
+    skoplaki_variant = "model1",
+    T_NOCT = T_NOCT,
+    T_a_NOCT = T_a_NOCT,
+    I_NOCT = I_NOCT,
+    v_NOCT = v_NOCT,
+    eta_STC = eta_STC,
+    tau_alpha = tau_alpha,
+    u0 = u0,
+    u1 = u1
   )
+  result$model <- paste("olmo", "faiman", sep = "_")
+  result$skoplaki_variant <- NA
+  cols_to_keep <- c("time", "GHI", "T_air", "wind", "model", "transposition",
+                    "decomposition", "cell_temp", "skoplaki_variant",
+                    "G_poa", "T_cell", "P_dc")
+  if (!isFALSE(iam_exp) && !is.na(iam_exp)) {
+    cols_to_keep <- c(cols_to_keep, "iam")
+  }
+  results[[length(results) + 1]] <- result[, cols_to_keep]
 
-  # Run each combination
-  results <- lapply(seq_len(nrow(combinations)), function(i) {
-    combo <- combinations[i, ]
-
+  # Skoplaki cell temp (both variants)
+  for (skoplaki_variant in c("model1", "model2")) {
     result <- pv_dc_pipeline(
       time = time,
       lat = lat,
@@ -135,8 +267,8 @@ pv_dc_ensemble <- function(
       tilt = tilt,
       azimuth = azimuth,
       albedo = albedo,
-      transposition_model = combo$transposition,
-      cell_temp_model = combo$cell_temp,
+      transposition_model = "olmo",
+      cell_temp_model = "skoplaki",
       iam_exp = iam_exp,
       P_dc0 = P_dc0,
       gamma = gamma,
@@ -152,18 +284,20 @@ pv_dc_ensemble <- function(
       u1 = u1
     )
 
-    # Add model identifier
-    result$model <- paste(combo$transposition, combo$cell_temp, sep = "_")
+    # Rename skoplaki column to skoplaki_variant
+    result$skoplaki_variant <- result$skoplaki
+    result$skoplaki <- NULL
 
-    # Return only common columns for ensemble comparison
+    result$model <- paste("olmo", "skoplaki", skoplaki_variant, sep = "_")
+
     cols_to_keep <- c("time", "GHI", "T_air", "wind", "model", "transposition",
-                      "decomposition", "cell_temp", "G_poa", "T_cell", "P_dc")
+                      "decomposition", "cell_temp", "skoplaki_variant",
+                      "G_poa", "T_cell", "P_dc")
     if (!isFALSE(iam_exp) && !is.na(iam_exp)) {
       cols_to_keep <- c(cols_to_keep, "iam")
     }
-
-    result[, cols_to_keep]
-  })
+    results[[length(results) + 1]] <- result[, cols_to_keep]
+  }
 
   # Combine all results
   do.call(rbind, results)
