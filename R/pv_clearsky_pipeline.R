@@ -19,8 +19,11 @@
 #' @param wind Wind speed in m/s
 #' @param tilt Panel tilt angle from horizontal in degrees (0 = horizontal, 90 = vertical)
 #' @param azimuth Panel azimuth angle in degrees (0 = north, 90 = east, 180 = south, 270 = west)
-#' @param linke_turbidity Linke turbidity coefficient. Default: 3.0 (clean rural).
-#'   Can be a single value or vector matching length of time.
+#' @param linke_turbidity Linke turbidity coefficient. Can be:
+#'   - NULL (default): Automatically lookup from global climatological database
+#'     (requires hdf5r package). Recommended for long-term simulations.
+#'   - Single numeric value: Applied to all times (e.g., 3.0 for clean rural)
+#'   - Numeric vector: Matching length of time for custom time-varying turbidity
 #' @param altitude Altitude above sea level in meters. Default: 1233 (De Aar, South Africa)
 #' @param albedo Ground albedo (reflectance). Default: 0.2
 #' @param transposition_model Transposition model to use. Options: "haydavies", "reindl", "perez".
@@ -57,11 +60,13 @@
 #'
 #' @examples
 #' \dontrun{
+#' # Short-term simulation (one day)
 #' time <- seq(as.POSIXct("2026-01-15 06:00", tz = "UTC"),
 #'             by = "hour", length.out = 12)
 #' T_air <- rep(25, 12)
 #' wind <- rep(2, 12)
 #'
+#' # Default: linke_turbidity = NULL uses database lookup (requires hdf5r)
 #' result <- pv_clearsky_dc_pipeline(
 #'   time = time,
 #'   lat = -30.6279,
@@ -70,8 +75,22 @@
 #'   wind = wind,
 #'   tilt = 30,
 #'   azimuth = 0,
-#'   linke_turbidity = 3.0,
 #'   altitude = 1233
+#' )
+#'
+#' # Long-term simulation (one year) with automatic turbidity lookup
+#' time_year <- seq(as.POSIXct("2026-01-01 00:00", tz = "UTC"),
+#'                  as.POSIXct("2026-12-31 23:00", tz = "UTC"),
+#'                  by = "hour")
+#' # Turbidity automatically varies with season via database lookup
+#' result_year <- pv_clearsky_dc_pipeline(
+#'   time = time_year,
+#'   lat = -30.6279,
+#'   lon = 24.0054,
+#'   T_air = rep(25, length(time_year)),
+#'   wind = rep(2, length(time_year)),
+#'   tilt = 30,
+#'   azimuth = 0
 #' )
 #' }
 #'
@@ -84,7 +103,7 @@ pv_clearsky_dc_pipeline <- function(
   wind,
   tilt,
   azimuth,
-  linke_turbidity = 3.0,
+  linke_turbidity = NULL,
   altitude = 1233,
   albedo = 0.2,
   transposition_model = c("haydavies", "reindl", "perez"),
@@ -175,6 +194,7 @@ pv_clearsky_dc_pipeline <- function(
 #' T_air <- rep(25, 12)
 #' wind <- rep(2, 12)
 #'
+#' # Default: linke_turbidity = NULL uses database lookup (requires hdf5r)
 #' result <- pv_clearsky_power_pipeline(
 #'   time = time,
 #'   lat = -30.6279,
@@ -183,7 +203,6 @@ pv_clearsky_dc_pipeline <- function(
 #'   wind = wind,
 #'   tilt = 30,
 #'   azimuth = 0,
-#'   linke_turbidity = 3.0,
 #'   altitude = 1233,
 #'   n_inverters = 20,
 #'   inverter_kw = 500
@@ -199,7 +218,7 @@ pv_clearsky_power_pipeline <- function(
   wind,
   tilt,
   azimuth,
-  linke_turbidity = 3.0,
+  linke_turbidity = NULL,
   altitude = 1233,
   albedo = 0.2,
   transposition_model = c("haydavies", "reindl", "perez"),

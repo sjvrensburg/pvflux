@@ -12,7 +12,7 @@ pv_clearsky_power_pipeline(
   wind,
   tilt,
   azimuth,
-  linke_turbidity = 3,
+  linke_turbidity = NULL,
   altitude = 1233,
   albedo = 0.2,
   transposition_model = c("haydavies", "reindl", "perez"),
@@ -45,8 +45,13 @@ calculations and returned in the original timezone.}
 
 \item{azimuth}{Panel azimuth angle in degrees (0 = north, 90 = east, 180 = south, 270 = west)}
 
-\item{linke_turbidity}{Linke turbidity coefficient. Default: 3.0 (clean rural).
-Can be a single value or vector matching length of time.}
+\item{linke_turbidity}{Linke turbidity coefficient. Can be:
+\itemize{
+\item NULL (default): Automatically lookup from global climatological database
+(requires hdf5r package). Recommended for long-term simulations.
+\item Single numeric value: Applied to all times (e.g., 3.0 for clean rural)
+\item Numeric vector: Matching length of time for custom time-varying turbidity
+}}
 
 \item{altitude}{Altitude above sea level in meters. Default: 1233 (De Aar, South Africa)}
 
@@ -101,6 +106,7 @@ time <- seq(as.POSIXct("2026-01-15 06:00", tz = "UTC"),
 T_air <- rep(25, 12)
 wind <- rep(2, 12)
 
+# Default: linke_turbidity = NULL uses database lookup (requires hdf5r)
 result <- pv_clearsky_power_pipeline(
   time = time,
   lat = -30.6279,
@@ -109,7 +115,6 @@ result <- pv_clearsky_power_pipeline(
   wind = wind,
   tilt = 30,
   azimuth = 0,
-  linke_turbidity = 3.0,
   altitude = 1233,
   n_inverters = 20,
   inverter_kw = 500
