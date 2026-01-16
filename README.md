@@ -34,6 +34,15 @@ for most applications. See `?olmo_transposition` for details.
   - Model 2: `h_w = 5.7 + 3.8*v_w` where `v_w = 0.68*v_f - 0.5`
 - **Faiman Model**: Simple empirical model adopted in IEC 61853 standards
 
+### Clear-Sky Models
+- **Ineichen-Perez Clear-Sky Model**: Estimates clear-sky irradiance (GHI, DNI, DHI) based on:
+  - Solar zenith angle
+  - Linke turbidity coefficient
+  - Altitude-based atmospheric corrections
+  - Optional Perez enhancement factor
+- **Clear-Sky Pipelines**: Complete DC and AC power estimation under clear-sky conditions
+- **Performance Metrics**: Clear-sky index (CSI) and performance ratio calculations
+
 ### Additional Features
 - **Incidence Angle Modifier (IAM)**: Optional optical loss correction using power-law model
 - **PVWatts DC Power Model**: Calculates DC power with temperature correction
@@ -200,6 +209,57 @@ Run all 8 model combinations for ensemble analysis:
 ```r
 pv_power_ensemble(time, lat, lon, GHI, T_air, wind, tilt, azimuth, ...)
 pv_dc_ensemble(time, lat, lon, GHI, T_air, wind, tilt, azimuth, ...)
+```
+
+### Clear-Sky Pipeline Functions
+
+#### `ineichen_clearsky()`
+
+Calculate clear-sky irradiance using the Ineichen-Perez model:
+
+```r
+clearsky <- ineichen_clearsky(
+  time, lat, lon,
+  linke_turbidity = 3.0,
+  altitude = 1233,  # De Aar altitude (m)
+  perez_enhancement = FALSE
+)
+```
+
+**Returns:** Data frame with ghi_clearsky, dni_clearsky, dhi_clearsky, zenith, airmass
+
+#### `pv_clearsky_power_pipeline()`
+
+Calculate expected AC power under clear-sky conditions:
+
+```r
+clearsky_result <- pv_clearsky_power_pipeline(
+  time, lat, lon, T_air, wind, tilt, azimuth,
+  linke_turbidity = 3.0,
+  altitude = 1233,
+  transposition_model = "haydavies",
+  cell_temp_model = "skoplaki",
+  n_inverters = 20,
+  inverter_kw = 500
+)
+```
+
+**Returns:** Data frame with clear-sky irradiance, DC power, AC power, and all intermediate values
+
+#### `pv_clearsky_dc_pipeline()`
+
+DC-only clear-sky pipeline (same as above, without AC conversion).
+
+#### `clearsky_index()` / `clearsky_performance_ratio()`
+
+Calculate performance metrics using clear-sky reference:
+
+```r
+# Clear-sky index (ratio of measured to clear-sky GHI)
+csi <- clearsky_index(GHI_measured, clearsky$ghi_clearsky)
+
+# Performance ratio (ratio of measured to clear-sky power)
+pr <- clearsky_performance_ratio(P_measured, clearsky_result$P_ac)
 ```
 
 ### Individual Model Functions
@@ -370,6 +430,34 @@ The package includes sensible defaults based on:
   - Efficiency: 97%
   - Configuration: 20 inverters × 500 kW
 
+- **Clear-Sky Model (Ineichen-Perez)**:
+  - Altitude: 1233 m (De Aar, South Africa)
+  - Linke turbidity: 3.0 (clean rural conditions)
+  - Perez enhancement: FALSE (disabled by default)
+  - Solar constant: 1366.1 W/m²
+
+## Code Attribution
+
+**Important:** Much of the code in this package is ported or adapted from the [**pvlib-python**](https://github.com/pvlib/pvlib-python) library, which is distributed under the BSD 3-Clause License. The pvlib-python project is a collaborative effort by researchers worldwide to provide validated solar energy modeling tools.
+
+Key components adapted from pvlib-python include:
+- Ineichen-Perez clear-sky model
+- Perez transposition model
+- Reindl transposition model
+- Hay-Davies transposition model
+- Erbs decomposition model
+- Boland-Ridley decomposition model
+- PVWatts DC power model
+- Kasten-Young airmass formula
+- Various helper functions and validation approaches
+
+We gratefully acknowledge the pvlib development community for their rigorous implementation and testing of these solar models. Users of this package should also cite the appropriate pvlib references when using these models.
+
+**pvlib-python References:**
+> Holmgren, W. F., Hansen, C. W., & Mikofski, M. A. (2018). pvlib python: a python package for modeling solar energy systems. *Journal of Open Source Software*, 3(29), 884. https://doi.org/10.21105/joss.00884
+
+> Anderson, K., et al. (2023). pvlib python: 2023 project update. *Journal of Open Source Software*, 8(92), 5994. https://doi.org/10.21105/joss.05994
+
 ## Attribution
 
 This package incorporates solar position calculation functions from the **insol** package (version 1.2.2) by Javier G. Corripio, which was removed from CRAN. These functions are used under the GPL-2 license.
@@ -391,16 +479,21 @@ ORCID: [0000-0002-0749-2277](https://orcid.org/0000-0002-0749-2277)
 
 This package was developed with assistance from Claude (Anthropic), an AI assistant. Claude was used for:
 
+- Porting pvlib-python models to R:
+  - Ineichen-Perez clear-sky model
+  - Perez, Reindl, and Hay-Davies transposition models
+  - Erbs and Boland-Ridley decomposition models
+  - PVWatts DC power model
 - Implementing the Olmo et al. (1999) transposition model equations
-- Implementing the Skoplaki cell temperature model (Equation 41)
-- Implementing Erbs decomposition, Hay-Davies transposition, and Faiman models
+- Implementing the Skoplaki and Faiman cell temperature models
 - Implementing the Incidence Angle Modifier (IAM)
+- Developing clear-sky pipeline functions and performance metrics
 - Refactoring code into modular functions with independent model selection
 - Adding ensemble analysis capabilities
 - Writing documentation and roxygen2 comments
 - Drafting the vignette and README content
 
-All AI-generated code and documentation was reviewed, validated against the original published equations, and approved by the package author.
+All AI-generated code and documentation was reviewed, validated against the original published equations and pvlib-python implementations, and approved by the package author.
 
 ## References
 
@@ -415,6 +508,12 @@ All AI-generated code and documentation was reviewed, validated against the orig
 - **Faiman, D. (2008).** Assessing the outdoor operating temperature of photovoltaic modules. *Progress in Photovoltaics*, 16(4), 307-315. [https://doi.org/10.1002/pip.813](https://doi.org/10.1002/pip.813)
 
 - **Hay, J. E., & Davies, J. A. (1980).** Calculations of the solar radiation incident on an inclined surface. In *Proc. of First Canadian Solar Radiation Data Workshop* (pp. 59). Ministry of Supply and Services, Canada.
+
+- **Holmgren, W. F., Hansen, C. W., & Mikofski, M. A. (2018).** pvlib python: a python package for modeling solar energy systems. *Journal of Open Source Software*, 3(29), 884. [https://doi.org/10.21105/joss.00884](https://doi.org/10.21105/joss.00884)
+
+- **Ineichen, P., & Perez, R. (2002).** A new airmass independent formulation for the Linke turbidity coefficient. *Solar Energy*, 73(3), 151-157. [https://doi.org/10.1016/S0038-092X(02)00045-2](https://doi.org/10.1016/S0038-092X(02)00045-2)
+
+- **Kasten, F., & Young, A. T. (1989).** Revised optical air mass tables and approximation formula. *Applied Optics*, 28(22), 4735-4738. [https://doi.org/10.1364/AO.28.004735](https://doi.org/10.1364/AO.28.004735)
 
 - **Martin, N., & Ruiz, J. M. (2001).** Calculation of the PV modules angular losses under field conditions by means of an analytical model. *Solar Energy Materials and Solar Cells*, 70(1), 25-38. [https://doi.org/10.1016/S0927-0248(00)00404-5](https://doi.org/10.1016/S0927-0248(00)00404-5)
 
