@@ -1,8 +1,8 @@
 #' PV DC Power Pipeline with Clear-Sky Irradiance
 #'
 #' @description
-#' Calculate expected DC power under clear-sky conditions using the Ineichen-Perez
-#' clear-sky model combined with the modular PV power pipeline.
+#' Calculate expected DC power under clear-sky conditions using a clear-sky model
+#' combined with the modular PV power pipeline.
 #'
 #' This function is useful for:
 #' - Estimating maximum potential power output
@@ -24,6 +24,8 @@
 #'     (requires hdf5r package). Recommended for long-term simulations.
 #'   - Single numeric value: Applied to all times (e.g., 3.0 for clean rural)
 #'   - Numeric vector: Matching length of time for custom time-varying turbidity
+#' @param clearsky_model Clear-sky model to use. Options: "ineichen", "haurwitz".
+#'   Default: "ineichen"
 #' @param altitude Altitude above sea level in meters. Default: 1233 (De Aar, South Africa)
 #' @param albedo Ground albedo (reflectance). Default: 0.2
 #' @param transposition_model Transposition model to use. Options: "haydavies", "reindl", "perez".
@@ -36,7 +38,7 @@
 #' @param gamma Temperature coefficient of power (1/K). Default: -0.0043
 #' @param solar_constant Solar constant (W/m^2). Default: 1366.1
 #' @param perez_enhancement Apply Perez enhancement factor for very clear conditions.
-#'   Default: FALSE
+#'   Only used for "ineichen" clearsky model. Default: FALSE
 #' @param ... Additional parameters passed to cell temperature and DC power models
 #'   (e.g., T_NOCT, skoplaki_variant, eta_STC, tau_alpha, u0, u1)
 #'
@@ -113,22 +115,34 @@ pv_clearsky_dc_pipeline <- function(
   gamma = -0.0043,
   solar_constant = 1366.1,
   perez_enhancement = FALSE,
+  clearsky_model = c("ineichen", "haurwitz"),
   ...
 ) {
   # Match arguments
   transposition_model <- match.arg(transposition_model)
   cell_temp_model <- match.arg(cell_temp_model)
+  clearsky_model <- match.arg(clearsky_model)
 
   # Calculate clear-sky irradiance
-  clearsky <- ineichen_clearsky(
-    time = time,
-    lat = lat,
-    lon = lon,
-    linke_turbidity = linke_turbidity,
-    altitude = altitude,
-    solar_constant = solar_constant,
-    perez_enhancement = perez_enhancement
-  )
+  if (clearsky_model == "ineichen") {
+    clearsky <- ineichen_clearsky(
+      time = time,
+      lat = lat,
+      lon = lon,
+      linke_turbidity = linke_turbidity,
+      altitude = altitude,
+      solar_constant = solar_constant,
+      perez_enhancement = perez_enhancement
+    )
+  } else if (clearsky_model == "haurwitz") {
+    clearsky <- haurwitz_clearsky(
+      time = time,
+      lat = lat,
+      lon = lon,
+      altitude = altitude,
+      solar_constant = solar_constant
+    )
+  }
 
   # Use the modular DC pipeline with clear-sky GHI
   # Note: The pipeline needs GHI, not DNI/DHI separately for most transposition models
@@ -169,8 +183,8 @@ pv_clearsky_dc_pipeline <- function(
 #' PV AC Power Pipeline with Clear-Sky Irradiance
 #'
 #' @description
-#' Calculate expected AC power under clear-sky conditions using the Ineichen-Perez
-#' clear-sky model combined with the full PV power pipeline (DC + AC conversion).
+#' Calculate expected AC power under clear-sky conditions using a clear-sky model
+#' combined with the full PV power pipeline (DC + AC conversion).
 #'
 #' This extends \code{\link{pv_clearsky_dc_pipeline}} by adding AC conversion with
 #' inverter clipping.
@@ -228,6 +242,7 @@ pv_clearsky_power_pipeline <- function(
   gamma = -0.0043,
   solar_constant = 1366.1,
   perez_enhancement = FALSE,
+  clearsky_model = c("ineichen", "haurwitz"),
   n_inverters = 20,
   inverter_kw = 500,
   eta_inv = 0.97,
@@ -252,6 +267,7 @@ pv_clearsky_power_pipeline <- function(
     gamma = gamma,
     solar_constant = solar_constant,
     perez_enhancement = perez_enhancement,
+    clearsky_model = clearsky_model,
     ...
   )
 
@@ -296,8 +312,11 @@ pv_clearsky_power_pipeline <- function(
 #'
 #' @examples
 #' \dontrun{
-#' # Calculate clear-sky conditions
+#' # Calculate clear-sky conditions with Ineichen model
 #' clearsky <- ineichen_clearsky(time, lat, lon, linke_turbidity = 3.0)
+#'
+#' # Or using Haurwitz model (simpler, requires only solar position)
+#' clearsky_haurwitz <- haurwitz_clearsky(time, lat, lon)
 #'
 #' # Assume some measured GHI with clouds
 #' GHI_measured <- clearsky$ghi_clearsky * 0.7  # 70% of clear-sky
@@ -343,9 +362,15 @@ clearsky_index <- function(
 #'
 #' @examples
 #' \dontrun{
-#' # Calculate clear-sky power
+#' # Calculate clear-sky power with Ineichen model (default)
 #' clearsky_result <- pv_clearsky_power_pipeline(
 #'   time, lat, lon, T_air, wind, tilt, azimuth
+#' )
+#'
+#' # Or with Haurwitz model (simpler, no turbidity needed)
+#' clearsky_result_haurwitz <- pv_clearsky_power_pipeline(
+#'   time, lat, lon, T_air, wind, tilt, azimuth,
+#'   clearsky_model = "haurwitz"
 #' )
 #'
 #' # Assume some measured power (actual conditions with clouds, soiling, etc.)

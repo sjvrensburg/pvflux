@@ -22,6 +22,7 @@ pv_clearsky_power_pipeline(
   gamma = -0.0043,
   solar_constant = 1366.1,
   perez_enhancement = FALSE,
+  clearsky_model = c("ineichen", "haurwitz"),
   n_inverters = 20,
   inverter_kw = 500,
   eta_inv = 0.97,
@@ -73,7 +74,10 @@ Set to NA or FALSE to disable IAM. Default: 0.05}
 \item{solar_constant}{Solar constant (W/m^2). Default: 1366.1}
 
 \item{perez_enhancement}{Apply Perez enhancement factor for very clear conditions.
-Default: FALSE}
+Only used for "ineichen" clearsky model. Default: FALSE}
+
+\item{clearsky_model}{Clear-sky model to use. Options: "ineichen", "haurwitz".
+Default: "ineichen"}
 
 \item{n_inverters}{Number of inverters. Default: 20}
 
@@ -93,8 +97,8 @@ Data frame with all columns from \code{\link{pv_clearsky_dc_pipeline}} plus:
 }
 }
 \description{
-Calculate expected AC power under clear-sky conditions using the Ineichen-Perez
-clear-sky model combined with the full PV power pipeline (DC + AC conversion).
+Calculate expected AC power under clear-sky conditions using a clear-sky model
+combined with the full PV power pipeline (DC + AC conversion).
 
 This extends \code{\link{pv_clearsky_dc_pipeline}} by adding AC conversion with
 inverter clipping.

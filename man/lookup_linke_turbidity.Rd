@@ -57,9 +57,19 @@ Linke turbidity database by Remund et al. (2003).
 \item Time: Monthly climatology (12 values per location)
 }
 
-\strong{Interpolation}: When \code{interp_turbidity = TRUE}, monthly values are
+\strong{Interpolation}: When \\code{interp_turbidity = TRUE}, monthly values are
 interpolated to daily resolution using a sinusoidal fit through month
 midpoints. This provides smooth daily variations.
+
+\strong{Timezone Handling}: The month for turbidity lookup is determined from
+the input time's \\strong{local timezone} (if specified), not UTC. For example:
+\\itemize{
+\\item Input: "2026-01-15 23:00:00 SAST" (UTC+2) → Uses January's turbidity
+\\item Input: "2026-01-15 21:00:00 UTC" (same physical moment) → Uses January's turbidity
+}
+This approach is appropriate for monthly climatological data, where the calendar
+month is the relevant index. Day-of-year interpolation (if enabled) also uses the
+local date to determine position within the month.
 }
 \examples{
 \dontrun{

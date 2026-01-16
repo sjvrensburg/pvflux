@@ -36,8 +36,11 @@ CSI values:
 }
 \examples{
 \dontrun{
-# Calculate clear-sky conditions
+# Calculate clear-sky conditions with Ineichen model
 clearsky <- ineichen_clearsky(time, lat, lon, linke_turbidity = 3.0)
+
+# Or using Haurwitz model (simpler, requires only solar position)
+clearsky_haurwitz <- haurwitz_clearsky(time, lat, lon)
 
 # Assume some measured GHI with clouds
 GHI_measured <- clearsky$ghi_clearsky * 0.7  # 70\% of clear-sky

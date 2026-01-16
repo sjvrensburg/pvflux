@@ -32,9 +32,15 @@ Clear-sky PR is useful for:
 }
 \examples{
 \dontrun{
-# Calculate clear-sky power
+# Calculate clear-sky power with Ineichen model (default)
 clearsky_result <- pv_clearsky_power_pipeline(
   time, lat, lon, T_air, wind, tilt, azimuth
+)
+
+# Or with Haurwitz model (simpler, no turbidity needed)
+clearsky_result_haurwitz <- pv_clearsky_power_pipeline(
+  time, lat, lon, T_air, wind, tilt, azimuth,
+  clearsky_model = "haurwitz"
 )
 
 # Assume some measured power (actual conditions with clouds, soiling, etc.)

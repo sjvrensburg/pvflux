@@ -8,7 +8,7 @@ pvflux is an R package for solar PV power forecasting with a modular pipeline ar
 - Transposition models (Hay-Davies, Reindl, Perez, Olmo)
 - Decomposition models (Erbs, Boland-Ridley)
 - Cell temperature models (Skoplaki, Faiman)
-- Clear-sky models (Ineichen-Perez)
+- Clear-sky models (Ineichen-Perez, Haurwitz)
 
 Run ensemble analysis across all model combinations, or estimate clear-sky power for performance monitoring.
 
@@ -24,8 +24,8 @@ The package uses a **three-level abstraction** with two parallel pathways:
 3. **Convenience functions** - `pv_power_pipeline()` (DC+AC), `pv_power_ensemble()` (all combinations)
 
 ### Clear-Sky Pathway (Estimated Irradiance)
-1. **Clear-sky model** - `ineichen_clearsky()` estimates GHI, DNI, DHI from solar geometry and turbidity
-2. **Clear-sky pipelines** - `pv_clearsky_dc_pipeline()` and `pv_clearsky_power_pipeline()`
+1. **Clear-sky models** - `ineichen_clearsky()` (solar geometry + turbidity) or `haurwitz_clearsky()` (solar geometry only)
+2. **Clear-sky pipelines** - `pv_clearsky_dc_pipeline()` and `pv_clearsky_power_pipeline()` with model selection
 3. **Performance metrics** - `clearsky_index()` and `clearsky_performance_ratio()` for monitoring
 
 ### Data Flow Pipeline (Main Pathway)
@@ -60,7 +60,8 @@ Step 5: AC Conversion (P_dc → P_ac)
 Input (time, lat, lon, T_air, wind, tilt, azimuth, linke_turbidity, altitude)
     ↓
 Step 1: Clear-Sky Irradiance
-    └─ ineichen_clearsky() → (GHI, DNI, DHI, airmass)
+    ├─ ineichen_clearsky() → (GHI, DNI, DHI, airmass) [requires turbidity]
+    └─ haurwitz_clearsky() → (GHI, DNI, DHI, airmass) [simpler, no turbidity]
     ↓
 Step 2-5: Same as Main Pathway
     └─ Uses GHI from clear-sky model instead of measurements
@@ -191,6 +192,11 @@ attr(result$time, "tzone")  # "Africa/Johannesburg"
   - Linke turbidity coefficient (atmospheric clarity)
   - Altitude-based atmospheric pressure correction
   - Optional Perez enhancement factor for very clear conditions
+- **Haurwitz**: Simple GHI model based only on solar zenith angle
+  - Uses formula: `I = 1098 * cos(z) * exp(-0.059 / cos(z))`
+  - Estimates DNI and DHI using atmospheric transmission approximations
+  - No turbidity or altitude parameters required
+  - Suitable for quick estimates when atmospheric data is unavailable
 - **Helper functions**: `kasten_young_airmass()`, `atm_pressure_altitude_correction()`, `simple_linke_turbidity()`
 
 ### Default Module Parameters (Trina TSM-PC05)
@@ -222,6 +228,7 @@ attr(result$time, "tzone")  # "Africa/Johannesburg"
 - `R/faiman_cell_temperature.R` - Faiman IEC 61853 model
 - `R/pvwatts_dc.R` - PVWatts DC power model
 - `R/ineichen_clearsky.R` - Ineichen-Perez clear-sky model
+- `R/haurwitz_clearsky.R` - Haurwitz clear-sky model
 
 ### Pipeline Files
 - `R/pv_dc_pipeline.R` - Main modular DC pipeline with model selection

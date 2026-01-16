@@ -22,6 +22,7 @@ pv_clearsky_dc_pipeline(
   gamma = -0.0043,
   solar_constant = 1366.1,
   perez_enhancement = FALSE,
+  clearsky_model = c("ineichen", "haurwitz"),
   ...
 )
 }
@@ -70,7 +71,10 @@ Set to NA or FALSE to disable IAM. Default: 0.05}
 \item{solar_constant}{Solar constant (W/m^2). Default: 1366.1}
 
 \item{perez_enhancement}{Apply Perez enhancement factor for very clear conditions.
-Default: FALSE}
+Only used for "ineichen" clearsky model. Default: FALSE}
+
+\item{clearsky_model}{Clear-sky model to use. Options: "ineichen", "haurwitz".
+Default: "ineichen"}
 
 \item{...}{Additional parameters passed to cell temperature and DC power models
 (e.g., T_NOCT, skoplaki_variant, eta_STC, tau_alpha, u0, u1)}
@@ -95,8 +99,8 @@ Data frame with columns:
 }
 }
 \description{
-Calculate expected DC power under clear-sky conditions using the Ineichen-Perez
-clear-sky model combined with the modular PV power pipeline.
+Calculate expected DC power under clear-sky conditions using a clear-sky model
+combined with the modular PV power pipeline.
 
 This function is useful for:
 \itemize{
