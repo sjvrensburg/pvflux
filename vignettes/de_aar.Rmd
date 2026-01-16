@@ -536,7 +536,7 @@ Using ensemble analysis provides several advantages:
 
 - Hay, J. E., & Davies, J. A. (1980). Calculations of the solar radiation incident on an inclined surface. In *Proc. of First Canadian Solar Radiation Data Workshop* (pp. 59). Ministry of Supply and Services, Canada.
 
-- Martin, N., & Ruiz, J. M. (2001). Calculation of the PV modules angular losses under field conditions by means of an analytical model. *Solar Energy Materials and Solar Cells*, 70(1), 25-38. [https://doi.org/10.1016/S0927-0248(00)00404-5](https://doi.org/10.1016/S0927-0248(00)00404-5)
+- Martin, N., & Ruiz, J. M. (2001). Calculation of the PV modules angular losses under field conditions by means of an analytical model. *Solar Energy Materials and Solar Cells*, 70(1), 25-38. [https://doi.org/10.1016/S0927-0248(00)00408-6](https://doi.org/10.1016/S0927-0248(00)00408-6)
 
 - Olmo, F. J., Vida, J., Foyo, I., Castro-Diez, Y., & Alados-Arboledas, L. (1999). Prediction of global irradiance on inclined surfaces from horizontal global irradiance. *Energy*, 24(8), 689-704. [https://doi.org/10.1016/S0360-5442(99)00025-0](https://doi.org/10.1016/S0360-5442(99)00025-0)
 

@@ -515,7 +515,7 @@ All AI-generated code and documentation was reviewed, validated against the orig
 
 - **Kasten, F., & Young, A. T. (1989).** Revised optical air mass tables and approximation formula. *Applied Optics*, 28(22), 4735-4738. [https://doi.org/10.1364/AO.28.004735](https://doi.org/10.1364/AO.28.004735)
 
-- **Martin, N., & Ruiz, J. M. (2001).** Calculation of the PV modules angular losses under field conditions by means of an analytical model. *Solar Energy Materials and Solar Cells*, 70(1), 25-38. [https://doi.org/10.1016/S0927-0248(00)00404-5](https://doi.org/10.1016/S0927-0248(00)00404-5)
+- **Martin, N., & Ruiz, J. M. (2001).** Calculation of the PV modules angular losses under field conditions by means of an analytical model. *Solar Energy Materials and Solar Cells*, 70(1), 25-38. [https://doi.org/10.1016/S0927-0248(00)00408-6](https://doi.org/10.1016/S0927-0248(00)00408-6)
 
 - **Olmo, F. J., Vida, J., Foyo, I., Castro-Diez, Y., & Alados-Arboledas, L. (1999).** Prediction of global irradiance on inclined surfaces from horizontal global irradiance. *Energy*, 24(8), 689-704. [https://doi.org/10.1016/S0360-5442(99)00025-0](https://doi.org/10.1016/S0360-5442(99)00025-0)
 

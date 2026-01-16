@@ -62,7 +62,7 @@
 #'
 #' Martin, N., & Ruiz, J. M. (2001). Calculation of the PV modules angular
 #' losses under field conditions by means of an analytical model. Solar Energy
-#' Materials and Solar Cells, 70(1), 25-38. \doi{10.1016/S0927-0248(00)00404-5}
+#' Materials and Solar Cells, 70(1), 25-38. \doi{10.1016/S0927-0248(00)00408-6}
 #'
 #' @export
 #'

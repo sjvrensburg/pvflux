@@ -136,12 +136,12 @@ result <- perez_transposition(
 Perez, R., Ineichen, P., Seals, R., Michalsky, J., Stewart, R., 1990.
 Modeling daylight availability and irradiance components from direct and
 global irradiance. Solar Energy 44 (5), 271-289.
-\doi{10.1016/0038-092X(90)90055-G}
+\doi{10.1016/0038-092X(90)90055-H}
 
 Perez, R., Seals, R., Ineichen, P., Stewart, R., Menicucci, D., 1987.
 A new simplified version of the Perez diffuse irradiance model for tilted
 surfaces. Solar Energy 39(3), 221-232.
-\doi{10.1016/0038-092X(87)90015-2}
+\doi{10.1016/S0038-092X(87)80031-2}
 
 Loutzenhiser, P. G., et al. (2007). Empirical validation of models to
 compute solar irradiance on inclined surfaces for building energy simulation.
