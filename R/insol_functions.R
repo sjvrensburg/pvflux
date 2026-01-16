@@ -169,3 +169,73 @@ sunpos <- function(sunv) {
   zenith <- degrees(acos(sunv[,3]))
   return(cbind(azimuth, zenith))
 }
+
+#' Filter times by solar elevation angle
+#'
+#' @description
+#' Create a logical filter vector indicating times when the solar zenith angle
+#' is below a specified threshold. This is useful for filtering out times when
+#' the sun is too low on the horizon, such as during twilight or nighttime.
+#'
+#' The function calculates solar position using the same algorithms as the
+#' clear-sky models, ensuring consistency with the rest of the package.
+#'
+#' This function uses the solar position calculations from the insol package
+#' (GPL-2 licensed) that are included in pvflux for solar position computations.
+#'
+#'
+#' @param time Timestamps as POSIXct, POSIXlt, character, or numeric.
+#' @param lat Latitude in degrees (negative for southern hemisphere)
+#' @param lon Longitude in degrees (east positive, west negative)
+#' @param max_zenith Maximum allowed solar zenith angle in degrees.
+#'   Times with zenith angles greater than this value will be filtered out.
+#'   Default: 10 degrees (solar elevation > 80 degrees)
+#' @param timezone Optional timezone specification. If NULL (default),
+#'   the timezone from the time input is used. If specified, times are
+#'   converted to this timezone for calculation.
+#'
+#' @return Logical vector of the same length as time, where TRUE indicates
+#'   the solar zenith angle is less than max_zenith.
+#'
+#' @examples
+#' \dontrun{
+#' # Create sample data
+#' time <- seq(as.POSIXct("2026-01-15 05:00", tz = "UTC"),
+#'             by = "hour", length.out = 24)
+#' lat <- -30.6279  # De Aar, South Africa
+#' lon <- 24.0054
+#'
+#' # Filter for times when sun is high in the sky (zenith < 10 degrees)
+#' is_good_time <- filter_solar_elevation(time, lat, lon, max_zenith = 10)
+#'
+#' # Get filtered times
+#' high_sun_times <- time[is_good_time]
+#' print(high_sun_times)
+#'
+#' # Filter actual measurement data
+#' # ghi_data <- data.frame(time = time, GHI = rnorm(24, 800, 200))
+#' # filtered_data <- ghi_data[is_good_time, ]
+#' }
+#'
+#' @name filter_solar_elevation
+#' @rdname filter_solar_elevation
+#' @export
+filter_solar_elevation <- function(time, lat, lon, max_zenith = 10, timezone = NULL) {
+  # Handle timezone if specified
+  if (!is.null(timezone)) {
+    time <- as.POSIXct(time, tz = timezone)
+  } else if (inherits(time, "POSIXt")) {
+    time <- as.POSIXct(time)
+  } else {
+    time <- as.POSIXct(time)
+  }
+
+  # Calculate solar position
+  jd <- JD(time)
+  sv <- sunvector(jd, lat, lon, 0)
+  sp <- sunpos(sv)
+  zenith_angles <- sp[, 2]
+
+  # Create filter
+  zenith_angles < max_zenith
+}
