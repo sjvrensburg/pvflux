@@ -26,14 +26,12 @@ specified, UTC is assumed. See \code{\link{time_utils}} for details.}
 
 \item{lon}{Longitude in degrees}
 
-\item{linke_turbidity}{Linke turbidity coefficient (dimensionless). Typical values:
+\item{linke_turbidity}{Linke turbidity coefficient (dimensionless). Can be:
 \itemize{
-\item 2.0: Very clean, clear sky
-\item 3.0: Clean, clear sky (rural)
-\item 4.0: Moderately turbid (urban)
-\item 5.0: Turbid
-\item 6-7: Very turbid (polluted)
-Default: 3.0
+\item A single numeric value applied to all times (default: 3.0)
+\item A numeric vector matching the length of time
+\item NULL to use \code{\link{lookup_linke_turbidity}()} from global database (requires hdf5r package)
+Typical values: 2.0 (very clean) to 6-7 (very turbid/polluted)
 }}
 
 \item{altitude}{Altitude above sea level in meters. Default: 1233 (De Aar, South Africa)}
@@ -76,12 +74,21 @@ Linke turbidity values between 1 and 10.
 time <- seq(as.POSIXct("2026-01-15 06:00", tz = "UTC"),
             by = "hour", length.out = 12)
 
-# Clean sky conditions
+# Clean sky conditions with fixed turbidity
 result <- ineichen_clearsky(
   time = time,
   lat = -30.6279,
   lon = 24.0054,
   linke_turbidity = 3.0,
+  altitude = 1233
+)
+
+# Use global database for turbidity (requires hdf5r package)
+result_auto <- ineichen_clearsky(
+  time = time,
+  lat = -30.6279,
+  lon = 24.0054,
+  linke_turbidity = NULL,  # Auto-lookup from database
   altitude = 1233
 )
 }

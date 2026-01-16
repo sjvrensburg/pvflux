@@ -16,13 +16,11 @@
 #'   specified, UTC is assumed. See \code{\link{time_utils}} for details.
 #' @param lat Latitude in degrees
 #' @param lon Longitude in degrees
-#' @param linke_turbidity Linke turbidity coefficient (dimensionless). Typical values:
-#'   - 2.0: Very clean, clear sky
-#'   - 3.0: Clean, clear sky (rural)
-#'   - 4.0: Moderately turbid (urban)
-#'   - 5.0: Turbid
-#'   - 6-7: Very turbid (polluted)
-#'   Default: 3.0
+#' @param linke_turbidity Linke turbidity coefficient (dimensionless). Can be:
+#'   - A single numeric value applied to all times (default: 3.0)
+#'   - A numeric vector matching the length of time
+#'   - NULL to use \code{\link{lookup_linke_turbidity}()} from global database (requires hdf5r package)
+#'   Typical values: 2.0 (very clean) to 6-7 (very turbid/polluted)
 #' @param altitude Altitude above sea level in meters. Default: 1233 (De Aar, South Africa)
 #' @param dni_extra Extraterrestrial normal irradiance (W/m^2). If NULL (default),
 #'   calculated using Spencer (1971) formula with solar_constant.
@@ -53,12 +51,21 @@
 #' time <- seq(as.POSIXct("2026-01-15 06:00", tz = "UTC"),
 #'             by = "hour", length.out = 12)
 #'
-#' # Clean sky conditions
+#' # Clean sky conditions with fixed turbidity
 #' result <- ineichen_clearsky(
 #'   time = time,
 #'   lat = -30.6279,
 #'   lon = 24.0054,
 #'   linke_turbidity = 3.0,
+#'   altitude = 1233
+#' )
+#'
+#' # Use global database for turbidity (requires hdf5r package)
+#' result_auto <- ineichen_clearsky(
+#'   time = time,
+#'   lat = -30.6279,
+#'   lon = 24.0054,
+#'   linke_turbidity = NULL,  # Auto-lookup from database
 #'   altitude = 1233
 #' )
 #' }
@@ -79,6 +86,24 @@ ineichen_clearsky <- function(
   time_info <- prepare_time_utc(time)
   time_utc <- time_info$time_utc
   original_tz <- time_info$original_tz
+
+  # Handle Linke turbidity
+  if (is.null(linke_turbidity)) {
+    # Use global database lookup (requires hdf5r)
+    linke_turbidity <- lookup_linke_turbidity(
+      time = time,
+      lat = lat,
+      lon = lon,
+      interp_turbidity = TRUE
+    )
+  } else {
+    # Validate and recycle if needed
+    n <- length(time)
+    if (length(linke_turbidity) == 1) {
+      linke_turbidity <- rep(linke_turbidity, n)
+    }
+    stopifnot(length(linke_turbidity) == n)
+  }
 
   # Convert time to Julian Day (using UTC time)
   jd <- JD(time_utc)

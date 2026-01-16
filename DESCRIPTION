@@ -4,12 +4,12 @@ Version: 0.1.0
 Authors@R:
     person("Stéfan", "Janse van Rensburg", , "stefanj@mandela.ac.za", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0002-0749-2277"))
-Description: Implements a modular solar PV power forecasting pipeline with multiple transposition models (Hay-Davies, Olmo), cell temperature models (Skoplaki, Faiman), PVWatts DC output, and simple AC inverter clipping. Supports independent model selection and ensemble analysis. Defaults based on Trina TSM-PC05 module and De Aar site. Incorporates solar position calculation functions from the insol package by Javier G. Corripio.
+Description: Implements a modular solar PV power forecasting pipeline with multiple transposition models (Hay-Davies, Reindl, Perez, Olmo), decomposition models (Erbs, Boland-Ridley), cell temperature models (Skoplaki, Faiman), and clear-sky models (Ineichen-Perez). Includes PVWatts DC output and simple AC inverter clipping. Supports independent model selection and ensemble analysis. Provides global Linke turbidity database for clear-sky modeling. Defaults based on Trina TSM-PC05 module and De Aar site. Incorporates solar position calculation functions from the insol package by Javier G. Corripio.
 License: GPL-3 + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2
 Depends: R (>= 4.0.0)
 Imports: lubridate
-Suggests: knitr, rmarkdown, dplyr, ggplot2
+Suggests: knitr, rmarkdown, dplyr, ggplot2, hdf5r
 VignetteBuilder: knitr
