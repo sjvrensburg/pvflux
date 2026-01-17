@@ -173,8 +173,8 @@ sunpos <- function(sunv) {
 #' Filter times by solar elevation angle
 #'
 #' @description
-#' Create a logical filter vector indicating times when the solar zenith angle
-#' is below a specified threshold. This is useful for filtering out times when
+#' Create a logical filter vector indicating times when the solar elevation angle
+#' meets or exceeds a specified threshold. This is useful for filtering out times when
 #' the sun is too low on the horizon, such as during early morning, late evening,
 #' twilight, or nighttime conditions.
 #'
@@ -184,17 +184,17 @@ sunpos <- function(sunv) {
 #' converted to UTC for solar position calculations.
 #'
 #' @details
-#' Solar zenith angle is the angle between the vertical (directly overhead) and
-#' the sun. A zenith angle of 0° means the sun is directly overhead, while 90°
-#' means the sun is on the horizon. Solar elevation angle is the complement:
-#' elevation = 90° - zenith.
+#' Solar elevation angle is the height of the sun above the horizon, ranging from
+#' 0° (sun on the horizon) to 90° (sun directly overhead). Times with elevation
+#' below the threshold will return FALSE.
 #'
-#' Common values for \code{max_zenith}:
+#' Common values for \code{min_elevation}:
 #' \itemize{
-#'   \item 80°: Sun above 10° elevation (full daylight, minimal atmospheric effects)
-#'   \item 75°: Sun above 15° elevation (good for most PV applications)
-#'   \item 70°: Sun above 20° elevation (avoiding low-angle irradiance)
-#'   \item 90°: Any time the sun is above the horizon (includes all daylight hours)
+#'   \item 0°: Any time the sun is above the horizon (all daylight hours)
+#'   \item 10°: Full daylight, minimal atmospheric effects (default)
+#'   \item 15°: Good for most PV applications
+#'   \item 20°: Avoiding low-angle irradiance and atmospheric effects
+#'   \item 30°: High sun only, for optimal PV performance
 #' }
 #'
 #' This function uses the solar position calculations from the insol package
@@ -206,13 +206,12 @@ sunpos <- function(sunv) {
 #'   \code{\link{time_utils}} for details.
 #' @param lat Latitude in degrees (negative for southern hemisphere)
 #' @param lon Longitude in degrees (east positive, west negative)
-#' @param max_zenith Maximum allowed solar zenith angle in degrees.
-#'   Times with zenith angles greater than this value will return FALSE.
-#'   Default: 80 degrees (solar elevation > 10 degrees)
+#' @param min_elevation Minimum solar elevation angle in degrees.
+#'   Times with elevation angles below this value will return FALSE.
+#'   Default: 10 degrees (filters out times when sun is very low on horizon)
 #'
 #' @return Logical vector of the same length as time, where TRUE indicates
-#'   the solar zenith angle is less than max_zenith (i.e., the sun is above
-#'   the specified elevation threshold).
+#'   the solar elevation angle is greater than or equal to min_elevation.
 #'
 #' @examples
 #' \dontrun{
@@ -222,25 +221,28 @@ sunpos <- function(sunv) {
 #' lat <- -30.6279  # De Aar, South Africa
 #' lon <- 24.0054
 #'
-#' # Filter for daytime hours (sun above horizon)
-#' is_daytime <- filter_solar_elevation(time, lat, lon, max_zenith = 90)
+#' # Filter for daytime only (sun above horizon)
+#' is_daytime <- filter_solar_elevation(time, lat, lon, min_elevation = 0)
 #' daytime_hours <- time[is_daytime]
 #' print(daytime_hours)
 #'
-#' # Filter for good solar conditions (elevation > 15 degrees)
-#' is_good <- filter_solar_elevation(time, lat, lon, max_zenith = 75)
+#' # Filter out low sun angles (keep only when sun is above 10 degrees)
+#' is_high_sun <- filter_solar_elevation(time, lat, lon, min_elevation = 10)
+#'
+#' # Filter out early morning and late evening (sun above 15 degrees)
+#' is_good_quality <- filter_solar_elevation(time, lat, lon, min_elevation = 15)
 #'
 #' # Apply filter to measurement data
 #' # ghi_data <- data.frame(time = time, GHI = measured_ghi)
-#' # good_data <- ghi_data[is_good, ]
+#' # filtered_data <- ghi_data[is_high_sun, ]
 #'
-#' # Use with clear-sky pipeline to get only high-sun periods
+#' # Use with clear-sky pipeline for only high-elevation periods
 #' result <- pv_clearsky_dc_pipeline(
-#'   time = time[is_good],
+#'   time = time[is_high_sun],
 #'   lat = lat,
 #'   lon = lon,
-#'   T_air = rep(25, sum(is_good)),
-#'   wind = rep(3, sum(is_good)),
+#'   T_air = rep(25, sum(is_high_sun)),
+#'   wind = rep(3, sum(is_high_sun)),
 #'   tilt = 30,
 #'   azimuth = 0
 #' )
@@ -249,7 +251,7 @@ sunpos <- function(sunv) {
 #' @name filter_solar_elevation
 #' @rdname filter_solar_elevation
 #' @export
-filter_solar_elevation <- function(time, lat, lon, max_zenith = 80) {
+filter_solar_elevation <- function(time, lat, lon, min_elevation = 10) {
   # Prepare time: convert to UTC for calculations (package standard)
   time_info <- prepare_time_utc(time)
   time_utc <- time_info$time_utc
@@ -260,6 +262,9 @@ filter_solar_elevation <- function(time, lat, lon, max_zenith = 80) {
   sp <- sunpos(sv)
   zenith_angles <- sp[, 2]
 
-  # Create filter (TRUE when zenith is less than threshold)
-  zenith_angles < max_zenith
+  # Convert zenith to elevation: elevation = 90 - zenith
+  elevation_angles <- 90 - zenith_angles
+
+  # Create filter (TRUE when elevation is at least min_elevation)
+  elevation_angles >= min_elevation
 }
