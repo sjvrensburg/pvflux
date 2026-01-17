@@ -193,11 +193,14 @@ attr(result$time, "tzone")  # "Africa/Johannesburg"
   - Altitude-based atmospheric pressure correction
   - Optional Perez enhancement factor for very clear conditions
 - **Haurwitz**: Simple GHI model based only on solar zenith angle
-  - Uses formula: `I = 1098 * cos(z) * exp(-0.059 / cos(z))`
+  - Uses formula: `I = 1098 * cos(z) * exp(-0.059 / cos(z))` where z is zenith angle
   - Estimates DNI and DHI using atmospheric transmission approximations
   - No turbidity or altitude parameters required
   - Suitable for quick estimates when atmospheric data is unavailable
-- **Helper functions**: `kasten_young_airmass()`, `atm_pressure_altitude_correction()`, `simple_linke_turbidity()`
+- **Clear-sky pipeline selection**: Use `clearsky_model` parameter in `pv_clearsky_*_pipeline()`
+  - `clearsky_model = "ineichen"` (default): Uses atmospheric turbidity data
+  - `clearsky_model = "haurwitz"`: Simpler, solar geometry only
+- **Helper functions**: `kasten_young_airmass()`, `atm_pressure_altitude_correction()`, `simple_linke_turbidity()`, `filter_solar_elevation()`
 
 ### Default Module Parameters (Trina TSM-PC05)
 - `P_dc0 = 230` W (nameplate DC power)
@@ -267,4 +270,19 @@ When implementing new models, check pvlib-python first for validated implementat
 1. **Olmo model**: Significant errors (RMSE 21-52%) outside Granada, Spain - recommend Hay-Davies for production
 2. **No automated tests**: Package has no `tests/` directory. Use manual test scripts for validation
 3. **GitHub-only**: Not intended for CRAN submission
-4. **No Linke turbidity database**: Use `simple_linke_turbidity()` for rough estimates or provide site-specific values
+4. **Linke turbidity database**: Requires hdf5r package. Use `linke_turbidity = NULL` for automatic lookup from global climatology database (SoDa), or provide site-specific values manually
+
+## Solar Elevation Filtering
+
+The `filter_solar_elevation()` function filters time series by solar elevation angle (sun height above horizon):
+
+```r
+# Filter out observations when solar elevation < 10 degrees
+is_valid <- filter_solar_elevation(time, lat, lon, min_elevation = 10)
+filtered_data <- original_data[is_valid, ]
+```
+
+- Uses `min_elevation` parameter: minimum solar elevation angle in degrees (default: 10°)
+- Returns `TRUE` when elevation ≥ threshold, `FALSE` when below threshold
+- Follows package timezone conventions (converts to UTC for calculations)
+- Solar elevation angle: 0° = sun on horizon, 90° = sun directly overhead
